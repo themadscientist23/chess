@@ -1,0 +1,289 @@
+.setupWrap {
+  width: 100%;
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.setupCard {
+  width: min(100%, 34rem);
+  padding: 1.5rem 1.35rem;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.64), rgba(223, 233, 255, 0.46));
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 20px 48px rgba(80, 100, 170, 0.22);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.h1 {
+  margin: 0;
+  font-size: 1.85rem;
+  font-weight: 780;
+  letter-spacing: -0.02em;
+  color: #2a2f48;
+}
+
+.p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #3d4566;
+  line-height: 1.5;
+}
+
+.setupRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.92rem;
+  color: #3a4162;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio input {
+  accent-color: #6b7fd7;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #3d4566;
+  flex: 1;
+}
+
+.input {
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 135, 200, 0.45);
+  background: rgba(255, 255, 255, 0.85);
+  color: #2f3552;
+}
+
+.input:focus-visible {
+  outline: 2px solid #6b7fd7;
+  outline-offset: 1px;
+}
+
+.primary {
+  font: inherit;
+  align-self: flex-start;
+  padding: 0.6rem 1.05rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(230, 236, 255, 0.7));
+  color: #343b5c;
+  font-weight: 650;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(90, 110, 170, 0.2);
+}
+
+.primary:hover {
+  filter: brightness(1.03);
+}
+
+.playWrap {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.playHeader {
+  text-align: center;
+  max-width: 44rem;
+}
+
+.statusRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.status {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #3d4566;
+  font-weight: 600;
+}
+
+.result {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+  color: #2a2f48;
+  font-weight: 650;
+}
+
+.opening {
+  margin: 0.35rem 0 0;
+  font-size: 0.92rem;
+  color: #3d4566;
+  font-weight: 500;
+}
+
+.openingEco {
+  font-weight: 750;
+  color: #4a5fc4;
+  margin-right: 0.35rem;
+}
+
+.centerRow {
+  width: 100%;
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.boardCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.nameBarTop,
+.nameBarBottom {
+  width: min(100%, 520px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  box-shadow: 0 12px 30px rgba(80, 100, 170, 0.14);
+}
+
+.name {
+  font-weight: 700;
+  color: #2a2f48;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nameEdit {
+  font: inherit;
+  font-weight: 700;
+  color: #2a2f48;
+  padding: 0.35rem 0.5rem;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 135, 200, 0.35);
+  background: rgba(255, 255, 255, 0.65);
+  max-width: 14rem;
+}
+
+.nameEdit:focus-visible {
+  outline: 2px solid #6b7fd7;
+  outline-offset: 1px;
+}
+
+.clock {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 750;
+  color: #2f3552;
+}
+
+.side {
+  width: min(100%, 320px);
+  padding: 0.95rem 1rem;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(223, 233, 255, 0.44));
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: 0 16px 36px rgba(80, 100, 170, 0.16);
+  max-height: min(72vh, 560px);
+  display: flex;
+  flex-direction: column;
+}
+
+.sideTitle {
+  margin: 0 0 0.65rem;
+  font-size: 1rem;
+  color: #2a2f48;
+}
+
+.movesGrid {
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.moveRow {
+  display: grid;
+  grid-template-columns: 2.3rem 1fr 1fr;
+  gap: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92rem;
+  color: #2f3552;
+}
+
+.moveNum {
+  opacity: 0.7;
+}
+
+.moveW,
+.moveB {
+  white-space: pre;
+}
+
+.sideActions {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.secondary {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 135, 200, 0.45);
+  background: rgba(255, 255, 255, 0.72);
+  color: #343b5c;
+  cursor: pointer;
+}
+
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.danger {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(220, 120, 150, 0.35);
+  background: rgba(255, 210, 224, 0.6);
+  color: #5a1a2e;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.danger:hover {
+  filter: brightness(1.02);
+}

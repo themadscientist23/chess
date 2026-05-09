@@ -1,0 +1,28 @@
+{
+  "name": "chess-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync-stockfish": "mkdir -p public/stockfish && cp node_modules/stockfish/bin/stockfish-18-lite-single.js node_modules/stockfish/bin/stockfish-18-lite-single.wasm public/stockfish/",
+    "postinstall": "npm run sync-stockfish",
+    "predev": "npm run sync-stockfish",
+    "prebuild": "npm run sync-stockfish",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3",
+    "stockfish": "^18.0.7"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.14",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.2",
+    "vite": "^5.4.11"
+  }
+}

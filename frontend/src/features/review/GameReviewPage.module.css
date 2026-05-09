@@ -1,0 +1,249 @@
+.layout {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: 0.75rem 1.25rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header {
+  width: 100%;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2.4rem;
+  letter-spacing: -0.025em;
+}
+
+.header p {
+  margin: 0.4rem 0 0;
+  font-size: 1.05rem;
+  color: #4a5278;
+}
+
+.main {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.boardCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.controls button {
+  font: inherit;
+  font-size: 0.98rem;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 135, 200, 0.45);
+  background: rgba(255, 255, 255, 0.78);
+  padding: 0.45rem 0.95rem;
+  cursor: pointer;
+  transition: background 120ms ease, transform 80ms ease;
+}
+
+.controls button:hover {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.controls button:active {
+  transform: translateY(1px);
+}
+
+.side {
+  width: min(100%, 460px);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.66), rgba(228, 236, 255, 0.42));
+  box-shadow: 0 18px 40px rgba(80, 100, 170, 0.18);
+  backdrop-filter: blur(14px);
+  padding: 1.05rem 1.1rem 1.2rem;
+}
+
+.panelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.7rem;
+}
+
+.panelHead h2 {
+  margin: 0;
+  font-size: 1.28rem;
+  letter-spacing: -0.01em;
+}
+
+.depthPill {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #3d4566;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(140, 155, 215, 0.32);
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  margin: 0.25rem 0;
+  color: #6a7090;
+  font-size: 0.96rem;
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 2.4rem 4.6rem 1fr;
+  gap: 0.7rem;
+  align-items: center;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(130, 150, 215, 0.22);
+  padding: 0.55rem 0.7rem;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 140ms ease;
+}
+
+.line:hover {
+  border-color: rgba(110, 130, 200, 0.42);
+}
+
+.lineRank {
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #5b6388;
+}
+
+.lineScore {
+  font-weight: 700;
+  font-size: 1.04rem;
+  text-align: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.scorePos {
+  background: rgba(67, 160, 71, 0.18);
+  color: #1f6f3b;
+  border: 1px solid rgba(67, 160, 71, 0.35);
+}
+
+.scoreNeg {
+  background: rgba(220, 79, 79, 0.16);
+  color: #8a2727;
+  border: 1px solid rgba(220, 79, 79, 0.32);
+}
+
+.scoreEven {
+  background: rgba(150, 158, 190, 0.18);
+  color: #2f3552;
+  border: 1px solid rgba(150, 158, 190, 0.34);
+}
+
+.linePv {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.97rem;
+  color: #2c3556;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.movesTitle {
+  margin-top: 1rem !important;
+  font-size: 1.22rem;
+}
+
+.movesPairs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.pairRow {
+  display: grid;
+  grid-template-columns: 2rem 1fr 1fr;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.moveNum {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: #4a5278;
+}
+
+.moveCell {
+  text-align: left;
+  border: 1px solid rgba(140, 155, 215, 0.2);
+  border-radius: 10px;
+  padding: 0.44rem 0.55rem;
+  font: inherit;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.7);
+  color: #2f3552;
+  min-height: 2rem;
+  cursor: pointer;
+}
+
+.moveCell:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.good {
+  background: rgba(67, 160, 71, 0.25);
+}
+
+.inaccuracy {
+  background: rgba(255, 213, 79, 0.4);
+}
+
+.mistake {
+  background: rgba(255, 183, 77, 0.46);
+}
+
+.blunder {
+  background: rgba(239, 83, 80, 0.4);
+}
+
+.empty {
+  text-align: center;
+  padding: 2rem;
+}
+
+.error {
+  color: #9d1b3a;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0.25rem 0;
+}

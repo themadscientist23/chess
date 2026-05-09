@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.DS_Store
+*.local
+
+# Copied from node_modules/stockfish on dev/build (see frontend `sync-stockfish`)
+frontend/public/stockfish/
+
+# Local SQLite (dev)
+backend/data/
