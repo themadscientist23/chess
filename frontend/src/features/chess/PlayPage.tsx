@@ -22,6 +22,7 @@ import {
   type StockfishHandle,
 } from "../../chess/stockfish";
 import { ChessBoard } from "../../components/chess/ChessBoard";
+import { Button } from "../../components/ui/Button";
 import { useSettings } from "../../context/SettingsContext";
 import { gamesApi } from "../../lib/api";
 import { formatClock } from "../../lib/clock";
@@ -29,7 +30,6 @@ import { prettyFromUci } from "../../lib/sanFormat";
 import { useOpening } from "./useOpening";
 import styles from "./PlayPage.module.css";
 
-const AI_DEPTH = 18;
 const START_CLOCK_MS = 10 * 60 * 1000;
 
 type PlayMode = "pvp" | "ai";
@@ -218,9 +218,10 @@ export function PlayPage() {
 
     engineSearchRef.current = true;
     const fen = toFen(game);
-    console.debug("[play] go", { fen, depth: AI_DEPTH });
-    sf.go(fen, AI_DEPTH);
-  }, [engineShouldMove, game]);
+    const depth = settings.engineDepth;
+    console.debug("[play] go", { fen, depth });
+    sf.go(fen, depth);
+  }, [engineShouldMove, game, settings.engineDepth]);
 
   const resetToSetup = useCallback(() => {
     sfRef.current?.stop();
@@ -395,13 +396,32 @@ export function PlayPage() {
     return rows;
   }, [plies]);
 
+  const [flipped, setFlipped] = useState(false);
+
+  // base perspective: explicit override from settings, else follow human side.
+  const basePerspective: Color = useMemo(() => {
+    if (settings.defaultOrientation === "white") return "w";
+    if (settings.defaultOrientation === "black") return "b";
+    return playMode === "ai" ? humanColor : "w";
+  }, [settings.defaultOrientation, playMode, humanColor]);
+
+  // final perspective applies the user's manual flip on top.
+  const perspective: Color = flipped
+    ? basePerspective === "w" ? "b" : "w"
+    : basePerspective;
+
+  // reset the flip whenever a new game starts so the base orientation wins.
+  useEffect(() => {
+    if (view === "setup") setFlipped(false);
+  }, [view]);
+
   const topLabel = useMemo(
-    () => (humanColor === "w" ? blackName : whiteName),
-    [blackName, humanColor, whiteName],
+    () => (perspective === "w" ? blackName : whiteName),
+    [blackName, perspective, whiteName],
   );
   const bottomLabel = useMemo(
-    () => (humanColor === "w" ? whiteName : blackName),
-    [blackName, humanColor, whiteName],
+    () => (perspective === "w" ? whiteName : blackName),
+    [blackName, perspective, whiteName],
   );
 
   if (view === "setup") {
@@ -468,17 +488,16 @@ export function PlayPage() {
             </div>
           )}
 
-          <button type="button" className={styles.primary} onClick={startGame}>
+          <Button variant="primary" size="lg" onClick={startGame}>
             Start game
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
-  const youIsWhite = playMode === "ai" ? humanColor === "w" : true;
-  const topClockMs = youIsWhite ? blackMs : whiteMs;
-  const bottomClockMs = youIsWhite ? whiteMs : blackMs;
+  const topClockMs = perspective === "w" ? blackMs : whiteMs;
+  const bottomClockMs = perspective === "w" ? whiteMs : blackMs;
 
   return (
     <div className={styles.playWrap}>
@@ -501,9 +520,9 @@ export function PlayPage() {
             {editingBlack || editingWhite ? (
               <input
                 className={styles.nameEdit}
-                value={humanColor === "w" ? blackName : whiteName}
+                value={perspective === "w" ? blackName : whiteName}
                 onChange={(e) => {
-                  if (humanColor === "w") setBlackName(e.target.value);
+                  if (perspective === "w") setBlackName(e.target.value);
                   else setWhiteName(e.target.value);
                 }}
                 onBlur={() => {
@@ -516,7 +535,7 @@ export function PlayPage() {
               <span
                 className={styles.name}
                 onDoubleClick={() => {
-                  if (humanColor === "w") setEditingBlack(true);
+                  if (perspective === "w") setEditingBlack(true);
                   else setEditingWhite(true);
                 }}
               >
@@ -529,22 +548,22 @@ export function PlayPage() {
           <ChessBoard
             game={game}
             selected={selected}
-            lastMove={lastMove}
-            highlights={highlights}
+            lastMove={settings.highlightLastMove ? lastMove : null}
+            highlights={settings.showMoveHints ? highlights : new Map()}
             onSquareClick={onSquareClick}
             promote={promote}
             onPromote={finishPromotion}
             interactive={view === "playing"}
-            perspective={humanColor}
+            perspective={perspective}
           />
 
           <div className={styles.nameBarBottom}>
             {editingWhite || editingBlack ? (
               <input
                 className={styles.nameEdit}
-                value={humanColor === "w" ? whiteName : blackName}
+                value={perspective === "w" ? whiteName : blackName}
                 onChange={(e) => {
-                  if (humanColor === "w") setWhiteName(e.target.value);
+                  if (perspective === "w") setWhiteName(e.target.value);
                   else setBlackName(e.target.value);
                 }}
                 onBlur={() => {
@@ -557,7 +576,7 @@ export function PlayPage() {
               <span
                 className={styles.name}
                 onDoubleClick={() => {
-                  if (humanColor === "w") setEditingWhite(true);
+                  if (perspective === "w") setEditingWhite(true);
                   else setEditingBlack(true);
                 }}
               >
@@ -581,27 +600,29 @@ export function PlayPage() {
           </div>
 
           <div className={styles.sideActions}>
-            {view === "playing" ? (
-              <button type="button" className={styles.danger} onClick={onResign}>
-                Resign
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className={styles.secondary}
-              onClick={() => {}}
-              disabled
+            <Button
+              variant="subtle"
+              size="sm"
+              onClick={() => setFlipped((f) => !f)}
+              aria-label="Flip the board"
             >
+              ⇅ Flip board
+            </Button>
+            {view === "playing" ? (
+              <Button variant="danger" onClick={onResign}>
+                Resign
+              </Button>
+            ) : null}
+            <Button variant="ghost" disabled>
               Post-game review (from Games)
-            </button>
-            <button
-              type="button"
-              className={styles.secondary}
+            </Button>
+            <Button
+              variant="secondary"
               onClick={resetToSetup}
               disabled={view !== "finished"}
             >
               New game
-            </button>
+            </Button>
           </div>
         </aside>
       </div>

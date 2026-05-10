@@ -1,0 +1,104 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 80ms ease,
+    color 140ms ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid rgba(110, 130, 215, 0.65);
+  outline-offset: 2px;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* sizes */
+
+.sm {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+}
+
+.md {
+  font-size: 1rem;
+  padding: 0.55rem 1rem;
+}
+
+.lg {
+  font-size: 1.08rem;
+  padding: 0.7rem 1.35rem;
+  border-radius: 14px;
+}
+
+/* variants */
+
+.primary {
+  background: linear-gradient(135deg, #38D1FF, #2d63e2);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(80, 100, 215, 0.32);
+}
+.primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #38D1FF, #38D1FF);
+  box-shadow: 0 10px 26px rgba(80, 100, 215, 0.4);
+}
+
+.secondary {
+  background: rgba(255, 255, 255, 0.82);
+  color: #2c3556;
+  border-color: rgba(140, 155, 215, 0.45);
+}
+.secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(110, 130, 200, 0.6);
+}
+
+.ghost {
+  background: transparent;
+  color: #3d4566;
+  border-color: rgba(140, 155, 215, 0.32);
+}
+.ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(110, 130, 200, 0.5);
+}
+
+.subtle {
+  background: rgba(255, 255, 255, 0.6);
+  color: #3d4566;
+  border-color: transparent;
+}
+.subtle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.danger {
+  background: linear-gradient(135deg, #ef5350, #c62828);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(220, 70, 70, 0.32);
+}
+.danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f06866, #d63a3a);
+}

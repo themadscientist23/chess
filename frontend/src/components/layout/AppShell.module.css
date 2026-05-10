@@ -11,6 +11,7 @@
   border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow: 0 14px 34px rgba(80, 100, 170, 0.16);
   backdrop-filter: blur(12px);
+  font-family: var(--nav-font);
 }
 
 .brand {
@@ -19,6 +20,15 @@
   letter-spacing: -0.02em;
   color: #2a2f48;
   margin-right: auto;
+  text-decoration: none;
+  padding: 0.35rem 0.65rem;
+  border-radius: 12px;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.brand:hover {
+  background: rgba(255, 255, 255, 0.55);
+  transform: translateY(-1px);
 }
 
 .links {

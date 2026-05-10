@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { initialGameState, parseUciMove, replayToPly, toFen, type Coord } from "../../chess/game";
 import { ChessBoard } from "../../components/chess/ChessBoard";
+import { Button } from "../../components/ui/Button";
+import { useSettings } from "../../context/SettingsContext";
 import {
   createAnalysisEngine,
   type AnalysisEngine,
@@ -9,9 +11,10 @@ import {
 } from "../../chess/stockfishAnalyze";
 import { gamesApi, type SavedGame } from "../../lib/api";
 import {
-  classifyByEvalDelta,
+  classifyMoveQuality,
   deltaForMove,
   formatEngineScore,
+  GRADE_META,
   scoreSign,
   topScoreCp,
   type MoveGrade,
@@ -25,8 +28,10 @@ const SCORE_DEPTH = 10;
 
 export function GameReviewPage() {
   const { id = "" } = useParams();
+  const { settings } = useSettings();
   const [game, setGame] = useState<SavedGame | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [flipped, setFlipped] = useState(false);
 
   // loads selected game from backend.
   useEffect(() => {
@@ -135,11 +140,16 @@ export function GameReviewPage() {
     setIndex(ucis.length);
   }, [game, ucis.length]);
 
-  const [evals, setEvals] = useState<number[]>([]);
+  interface PlyEval {
+    cp: number;
+    best: string | null;
+  }
+
+  const [evals, setEvals] = useState<PlyEval[]>([]);
   const [gradingBusy, setGradingBusy] = useState(false);
   const [gradingError, setGradingError] = useState<string | null>(null);
 
-  // grades each move from the eval delta between consecutive positions.
+  // grades each move from eval delta + whether it matched the engine's bestmove.
   useEffect(() => {
     if (!game) return;
     const engine = engineRef.current;
@@ -151,13 +161,13 @@ export function GameReviewPage() {
 
     void runQueued(async () => {
       if (cancelled || engine.isDisposed()) return;
-      const out: number[] = [];
+      const out: PlyEval[] = [];
       try {
         for (let i = 0; i <= ucis.length; i++) {
           if (cancelled || engine.isDisposed()) break;
           const g = replayToPly(initialGameState(), ucis, i);
           const analysis = await engine.analyze(toFen(g), SCORE_DEPTH, 1);
-          out.push(topScoreCp(analysis));
+          out.push({ cp: topScoreCp(analysis), best: analysis.bestmove });
         }
         if (!cancelled) setEvals(out);
         console.debug("[review] grading ready", { entries: out.length });
@@ -195,21 +205,47 @@ export function GameReviewPage() {
       white: { text: string; grade: MoveGrade } | null;
       black: { text: string; grade: MoveGrade } | null;
     }> = [];
+
+    const cpSeries = evals.map((e) => e.cp);
+
+    const gradeAt = (i: number): MoveGrade => {
+      const delta = deltaForMove(cpSeries, i);
+      const matchedBest = !!evals[i]?.best && evals[i]!.best === ucis[i];
+      return classifyMoveQuality(delta, matchedBest);
+    };
+
     for (let i = 0; i < gameMoves.length; i += 2) {
-      const wDelta = deltaForMove(evals, i);
-      const bDelta = deltaForMove(evals, i + 1);
       rows.push({
         n: i / 2 + 1,
         white: gameMoves[i]
-          ? { text: gameMoves[i]!, grade: classifyByEvalDelta(wDelta) }
+          ? { text: gameMoves[i]!, grade: gradeAt(i) }
           : null,
         black: gameMoves[i + 1]
-          ? { text: gameMoves[i + 1]!, grade: classifyByEvalDelta(bDelta) }
+          ? { text: gameMoves[i + 1]!, grade: gradeAt(i + 1) }
           : null,
       });
     }
     return rows;
-  }, [evals, gameMoves]);
+  }, [evals, gameMoves, ucis]);
+
+  // legend: only show grades that actually appear in the game.
+  const presentGrades = useMemo(() => {
+    const set = new Set<MoveGrade>();
+    for (const row of pairedMoves) {
+      if (row.white) set.add(row.white.grade);
+      if (row.black) set.add(row.black.grade);
+    }
+    const order: MoveGrade[] = [
+      "brilliant",
+      "best",
+      "great",
+      "good",
+      "inaccuracy",
+      "mistake",
+      "blunder",
+    ];
+    return order.filter((g) => set.has(g));
+  }, [pairedMoves]);
 
   const emptyHighlights = useMemo(() => new Map<string, Coord>(), []);
 
@@ -226,6 +262,13 @@ export function GameReviewPage() {
   const sideToMove = displayGame.sideToMove;
   const panelDepth = panel?.depth ?? 0;
 
+  // base orientation honors user setting; flip toggles on top.
+  const baseOrientation: "w" | "b" =
+    settings.defaultOrientation === "black" ? "b" : "w";
+  const perspective: "w" | "b" = flipped
+    ? baseOrientation === "w" ? "b" : "w"
+    : baseOrientation;
+
   return (
     <div className={styles.layout}>
       <header className={styles.header}>
@@ -238,17 +281,54 @@ export function GameReviewPage() {
           <ChessBoard
             game={displayGame}
             selected={null}
-            lastMove={lastMove}
+            lastMove={settings.highlightLastMove ? lastMove : null}
             highlights={emptyHighlights}
             onSquareClick={() => {}}
             promote={null}
             onPromote={() => {}}
             interactive={false}
+            perspective={perspective}
           />
           <div className={styles.controls}>
-            <button type="button" onClick={() => setIndex((prev) => Math.max(0, prev - 1))}>← Prev</button>
-            <span>Move {index}/{ucis.length}</span>
-            <button type="button" onClick={() => setIndex((prev) => Math.min(ucis.length, prev + 1))}>Next →</button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIndex((prev) => Math.max(0, prev - 1))}
+              disabled={index === 0}
+            >
+              ← Prev
+            </Button>
+
+            <div className={styles.moveIndicator}>
+              <span className={styles.moveLabel}>
+                {index === 0
+                  ? "Start position"
+                  : `${Math.ceil(index / 2)}${index % 2 === 1 ? "." : "..."} ${gameMoves[index - 1] ?? ""}`}
+              </span>
+              <span className={styles.moveProgress}>
+                ply {index} of {ucis.length}
+              </span>
+            </div>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIndex((prev) => Math.min(ucis.length, prev + 1))}
+              disabled={index >= ucis.length}
+            >
+              Next →
+            </Button>
+          </div>
+
+          <div className={styles.controls}>
+            <Button
+              variant="subtle"
+              size="sm"
+              onClick={() => setFlipped((f) => !f)}
+              aria-label="Flip the board"
+            >
+              ⇅ Flip board
+            </Button>
           </div>
         </div>
 
@@ -265,11 +345,13 @@ export function GameReviewPage() {
                   : "—"}
             </span>
           </div>
+
           {panelError ? <p className={styles.error}>panel error: {panelError}</p> : null}
           {!panel && !panelError ? <p className={styles.muted}>Warming engine…</p> : null}
           {panel && panel.lines.length === 0 && !panelBusy ? (
             <p className={styles.muted}>No legal moves to evaluate.</p>
           ) : null}
+
           <div className={styles.lines}>
             {panel?.lines.map((line) => {
               const sign = scoreSign(line, sideToMove);
@@ -277,46 +359,70 @@ export function GameReviewPage() {
                 sign > 0 ? styles.scorePos : sign < 0 ? styles.scoreNeg : styles.scoreEven;
               return (
                 <div className={styles.line} key={line.multipv}>
-                  <span className={styles.lineRank}>#{line.multipv}</span>
-                  <span className={`${styles.lineScore} ${scoreClass}`}>
-                    {formatEngineScore(line, sideToMove)}
-                  </span>
-                  <span className={styles.linePv}>
+                  <div className={styles.lineHead}>
+                    <span className={styles.lineRank}>#{line.multipv}</span>
+                    <span className={`${styles.lineScore} ${scoreClass}`}>
+                      {formatEngineScore(line, sideToMove)}
+                    </span>
+                  </div>
+                  <div className={styles.linePv}>
                     {formatPvLine(displayGame, line.pvUci.slice(0, 12)) || "—"}
-                  </span>
+                  </div>
                 </div>
               );
             })}
           </div>
 
           <h2 className={styles.movesTitle}>Moves</h2>
-          {gradingBusy ? <p>Grading…</p> : null}
+          {gradingBusy ? <p className={styles.muted}>Grading…</p> : null}
           {gradingError ? <p className={styles.error}>grading error: {gradingError}</p> : null}
+
           <div className={styles.movesPairs}>
-            {pairedMoves.map((row) => {
-              return (
-                <div key={row.n} className={styles.pairRow}>
-                  <span className={styles.moveNum}>{row.n}.</span>
-                  <button
-                    type="button"
-                    className={`${styles.moveCell} ${row.white ? styles[row.white.grade] : ""}`}
-                    onClick={() => setIndex((row.n - 1) * 2 + 1)}
-                    disabled={!row.white}
-                  >
-                    {row.white?.text ?? ""}
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.moveCell} ${row.black ? styles[row.black.grade] : ""}`}
-                    onClick={() => setIndex((row.n - 1) * 2 + 2)}
-                    disabled={!row.black}
-                  >
-                    {row.black?.text ?? ""}
-                  </button>
-                </div>
-              );
-            })}
+            {pairedMoves.map((row) => (
+              <div key={row.n} className={styles.pairRow}>
+                <span className={styles.moveNum}>{row.n}.</span>
+                {(["white", "black"] as const).map((side) => {
+                  const cell = row[side];
+                  const ply = (row.n - 1) * 2 + (side === "white" ? 1 : 2);
+                  return (
+                    <button
+                      key={side}
+                      type="button"
+                      className={`${styles.moveCell} ${cell ? styles[cell.grade] : ""}`}
+                      onClick={() => setIndex(ply)}
+                      disabled={!cell}
+                    >
+                      {cell ? (
+                        <>
+                          <span
+                            className={`${styles.moveBadge} ${styles[`badge_${cell.grade}`]}`}
+                            aria-label={GRADE_META[cell.grade].label}
+                            title={GRADE_META[cell.grade].label}
+                          >
+                            {GRADE_META[cell.grade].glyph}
+                          </span>
+                          <span className={styles.moveText}>{cell.text}</span>
+                        </>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
+
+          {presentGrades.length > 0 ? (
+            <div className={styles.legend} aria-label="Move grade legend">
+              {presentGrades.map((g) => (
+                <span key={g} className={styles.legendItem}>
+                  <span className={`${styles.moveBadge} ${styles[`badge_${g}`]}`}>
+                    {GRADE_META[g].glyph}
+                  </span>
+                  <span>{GRADE_META[g].label}</span>
+                </span>
+              ))}
+            </div>
+          ) : null}
         </aside>
       </div>
     </div>

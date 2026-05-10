@@ -9,7 +9,9 @@ export function AppShell() {
       <div className={pageStyles.glow} aria-hidden />
 
       <nav className={styles.nav} aria-label="Main">
-        <span className={styles.brand}>Cloud Chess</span>
+        <NavLink to="/play" className={styles.brand} aria-label="Cloud Chess home">
+          Cloud Chess
+        </NavLink>
         <div className={styles.links}>
           <NavLink to="/play" className={({ isActive }) => (isActive ? styles.active : undefined)}>
             Play

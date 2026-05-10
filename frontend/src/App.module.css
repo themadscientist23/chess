@@ -146,7 +146,7 @@
   font-size: 0.72rem;
   line-height: 1.35;
   color: #3d4566;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--app-font);
   word-break: break-all;
   opacity: 0.92;
 }

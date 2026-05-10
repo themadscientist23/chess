@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+
+import { Button } from "../../components/ui/Button";
 import type { GameFolder } from "../../lib/api";
 import styles from "./AddMenu.module.css";
 
@@ -146,17 +148,17 @@ export function AddMenu({
           />
           {error ? <p className={styles.error}>{error}</p> : null}
           <div className={styles.popActions}>
-            <button type="button" className={styles.ghost} onClick={close}>
+            <Button variant="ghost" size="sm" onClick={close}>
               Cancel
-            </button>
-            <button
-              type="button"
-              className={styles.primary}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => void submitNewFolder()}
               disabled={submitting || !folderName.trim()}
             >
               Create
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -189,17 +191,17 @@ export function AddMenu({
           />
           {error ? <p className={styles.error}>{error}</p> : null}
           <div className={styles.popActions}>
-            <button type="button" className={styles.ghost} onClick={close}>
+            <Button variant="ghost" size="sm" onClick={close}>
               Cancel
-            </button>
-            <button
-              type="button"
-              className={styles.primary}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => void submitNewGame()}
               disabled={submitting || !pgn.trim() || targetFolderId == null}
             >
               Add game
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
