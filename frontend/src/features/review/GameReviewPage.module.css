@@ -239,15 +239,15 @@
 }
 
 .scorePos {
-  background: rgba(67, 160, 71, 0.18);
-  color: #1f6f3b;
-  border: 1px solid rgba(67, 160, 71, 0.35);
+  background: rgba(45, 99, 226, 0.12);
+  color: #1e4fb8;
+  border: 1px solid rgba(45, 99, 226, 0.36);
 }
 
 .scoreNeg {
-  background: rgba(220, 79, 79, 0.16);
-  color: #8a2727;
-  border: 1px solid rgba(220, 79, 79, 0.32);
+  background: rgba(198, 40, 40, 0.12);
+  color: #9a2430;
+  border: 1px solid rgba(198, 40, 40, 0.36);
 }
 
 .scoreEven {
@@ -338,86 +338,86 @@
 /* per-grade tints for cell + badge */
 
 .brilliant {
-  background: rgba(120, 86, 255, 0.18);
-  border-color: rgba(120, 86, 255, 0.45);
+  background: rgba(89, 220, 255, 0.22);
+  border-color: rgba(45, 99, 226, 0.5);
 }
 .badge_brilliant {
-  background: linear-gradient(135deg, #7e57c2, #5e35b1);
-  box-shadow: 0 4px 12px rgba(94, 53, 177, 0.35);
+  background: linear-gradient(135deg, #59dcff, #2d63e2);
+  box-shadow: 0 4px 12px rgba(45, 99, 226, 0.35);
 }
 
 .best {
-  background: rgba(38, 166, 154, 0.18);
-  border-color: rgba(38, 166, 154, 0.42);
+  background: rgba(45, 99, 226, 0.16);
+  border-color: rgba(45, 99, 226, 0.42);
 }
 .badge_best {
-  background: linear-gradient(135deg, #26a69a, #00897b);
+  background: linear-gradient(135deg, #6b8ef0, #2d63e2);
 }
 
 .great {
-  background: rgba(67, 160, 71, 0.2);
-  border-color: rgba(67, 160, 71, 0.42);
+  background: rgba(89, 220, 255, 0.18);
+  border-color: rgba(56, 168, 220, 0.45);
 }
 .badge_great {
-  background: linear-gradient(135deg, #66bb6a, #43a047);
+  background: linear-gradient(135deg, #7be3ff, #3a8fd4);
 }
 
 .good {
-  background: rgba(174, 213, 129, 0.22);
-  border-color: rgba(174, 213, 129, 0.5);
+  background: rgba(140, 170, 230, 0.22);
+  border-color: rgba(110, 140, 210, 0.45);
 }
 .badge_good {
-  background: linear-gradient(135deg, #9ccc65, #7cb342);
+  background: linear-gradient(135deg, #9eb6ef, #5a7fd0);
 }
 
 .inaccuracy {
-  background: rgba(255, 213, 79, 0.42);
-  border-color: rgba(245, 192, 0, 0.55);
+  background: rgba(255, 213, 79, 0.36);
+  border-color: rgba(220, 180, 40, 0.5);
 }
 .badge_inaccuracy {
-  background: linear-gradient(135deg, #ffd54f, #f5b800);
-  color: #4a3a00;
+  background: linear-gradient(135deg, #f0d060, #c9a020);
+  color: #3d3200;
 }
 
 .mistake {
-  background: rgba(255, 167, 38, 0.4);
-  border-color: rgba(255, 152, 0, 0.55);
+  background: rgba(255, 160, 120, 0.32);
+  border-color: rgba(220, 100, 80, 0.5);
 }
 .badge_mistake {
-  background: linear-gradient(135deg, #ffa726, #f57c00);
+  background: linear-gradient(135deg, #ff9a7a, #d45a48);
 }
 
 .blunder {
-  background: rgba(239, 83, 80, 0.36);
-  border-color: rgba(229, 57, 53, 0.55);
+  background: rgba(198, 40, 40, 0.18);
+  border-color: rgba(198, 40, 40, 0.48);
 }
 .badge_blunder {
-  background: linear-gradient(135deg, #ef5350, #c62828);
+  background: linear-gradient(135deg, #ff8f8c, #c62828);
 }
 
 .book {
-  background: rgba(160, 132, 96, 0.18);
-  border-color: rgba(140, 110, 76, 0.42);
+  background: rgba(140, 155, 215, 0.2);
+  border-color: rgba(110, 130, 190, 0.42);
 }
 .badge_book {
-  background: linear-gradient(135deg, #a1887f, #6d4c41);
+  background: linear-gradient(135deg, #8a9bc8, #4a5a8a);
   font-size: 0.68rem;
 }
 
 .excellent {
-  background: rgba(38, 198, 218, 0.18);
-  border-color: rgba(38, 166, 154, 0.4);
+  background: rgba(89, 220, 255, 0.16);
+  border-color: rgba(45, 99, 226, 0.38);
 }
 .badge_excellent {
-  background: linear-gradient(135deg, #26c6da, #0097a7);
+  background: linear-gradient(135deg, #59dcff, #4a8adf);
 }
 
 .miss {
-  background: rgba(255, 138, 101, 0.32);
-  border-color: rgba(230, 74, 25, 0.52);
+  background: rgba(198, 40, 40, 0.14);
+  border-color: rgba(180, 60, 70, 0.45);
 }
 .badge_miss {
-  background: linear-gradient(135deg, #ff7043, #d84315);
+  background: linear-gradient(135deg, #e87878, #b03040);
 }
 
 .legend {

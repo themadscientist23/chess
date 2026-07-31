@@ -146,10 +146,14 @@
   letter-spacing: 0.08em;
 }
 
+.headerToggleRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.55rem;
+}
+
 .scopeToggle {
   display: inline-flex;
-  align-self: flex-start;
-  margin: 0.6rem 0 0.35rem;
   padding: 3px;
   border-radius: 999px;
   background: rgba(140, 155, 215, 0.14);
@@ -210,13 +214,13 @@
 }
 
 .barWin {
-  background: linear-gradient(180deg, #66bb6a, #2e7d32);
+  background: linear-gradient(180deg, #59dcff, #2d63e2);
 }
 .barDraw {
-  background: linear-gradient(180deg, #cfd8dc, #90a4ae);
+  background: linear-gradient(180deg, #cfd6e2, #8a95af);
 }
 .barLoss {
-  background: linear-gradient(180deg, #ef5350, #b71c1c);
+  background: linear-gradient(180deg, #ff8f8c, #c62828);
 }
 
 .recordCounts {
@@ -245,19 +249,19 @@
 }
 
 .pillWin {
-  color: #1b5e20;
-  background: rgba(67, 160, 71, 0.2);
-  border-color: rgba(67, 160, 71, 0.4);
+  color: #1e4fb8;
+  background: rgba(45, 99, 226, 0.14);
+  border-color: rgba(45, 99, 226, 0.4);
 }
 .pillDraw {
-  color: #37474f;
-  background: rgba(144, 164, 174, 0.24);
-  border-color: rgba(120, 144, 156, 0.4);
+  color: #3a4162;
+  background: rgba(138, 149, 175, 0.2);
+  border-color: rgba(120, 132, 160, 0.4);
 }
 .pillLoss {
-  color: #8a1e1e;
-  background: rgba(239, 83, 80, 0.22);
-  border-color: rgba(229, 57, 53, 0.4);
+  color: #9a2430;
+  background: rgba(198, 40, 40, 0.12);
+  border-color: rgba(198, 40, 40, 0.38);
 }
 
 /* stat cards grid */

@@ -85,9 +85,14 @@ export function PlayPage() {
   const [lastMove, setLastMove] = useState<{ from: Coord; to: Coord } | null>(null);
   const [promote, setPromote] = useState<{ from: Coord; to: Coord } | null>(null);
   const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
-  // engine's self-reported UCI id name (e.g. "Stockfish 16.1"). shown as the
-  // opponent's display name whenever the human is playing the AI.
-  const [engineName, setEngineName] = useState<string>("Stockfish");
+
+  // human-facing engine label. we intentionally hide the specific wasm build
+  // (e.g. "Stockfish 18 lite") and instead advertise the play depth so it
+  // reads as a difficulty knob, not a version.
+  const engineName = useMemo(
+    () => `Stockfish (Depth ${settings.engineDepth})`,
+    [settings.engineDepth],
+  );
 
   const [whiteMs, setWhiteMs] = useState(START_CLOCK_MS);
   const [blackMs, setBlackMs] = useState(START_CLOCK_MS);
@@ -188,12 +193,6 @@ export function PlayPage() {
   useEffect(() => {
     const handle = createStockfish({
       onBestMove: (uci) => onBestMoveRef.current(uci),
-      onIdName: (name) => {
-        // trim any trailing build metadata after a space+parenthetical, keep
-        // it snappy: "Stockfish 16.1 by X" -> "Stockfish 16.1".
-        const clean = name.replace(/\s+by\s+.+$/i, "").trim() || name;
-        setEngineName(clean);
-      },
       onDiag: (d: StockfishDiag) => {
         const fatal =
           d.tag === "worker_error" ||
@@ -292,15 +291,16 @@ export function PlayPage() {
     setView("playing");
   }, [engineName, humanColor, opponentName, playMode, resetToSetup, username]);
 
-  // when the engine reports its full id (which can arrive after startGame),
-  // upgrade the Stockfish label — but only if the user hasn't typed a custom
-  // name over it.
+  // keep the AI-side label in sync with engineName (which tracks the depth
+  // setting). we only overwrite when the current label still looks like an
+  // engine name, so a user rename ("Terminator") is preserved.
   useEffect(() => {
     if (view !== "playing" || playMode !== "ai") return;
+    const looksLikeEngine = (cur: string) => /^stockfish\b/i.test(cur);
     if (humanColor === "w") {
-      setBlackName((cur) => (cur === "Stockfish" ? engineName : cur));
+      setBlackName((cur) => (looksLikeEngine(cur) ? engineName : cur));
     } else {
-      setWhiteName((cur) => (cur === "Stockfish" ? engineName : cur));
+      setWhiteName((cur) => (looksLikeEngine(cur) ? engineName : cur));
     }
   }, [engineName, humanColor, playMode, view]);
 

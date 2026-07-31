@@ -42,6 +42,14 @@ export interface GameFolder {
   gameCount: number;
 }
 
+export interface GameTag {
+  id: number;
+  name: string;
+  isSystem: boolean;
+  createdAt?: string;
+  gameCount?: number;
+}
+
 export interface SavedGame {
   id: number;
   folderId: number;
@@ -53,6 +61,7 @@ export interface SavedGame {
   ucis: string[];
   prettyMoves: string[];
   createdAt: string;
+  tags?: GameTag[];
 }
 
 export const gamesApi = {
@@ -64,8 +73,15 @@ export const gamesApi = {
       body: JSON.stringify({ name }),
     }),
 
-  listGames: (folderId?: number) =>
-    api<{ games: SavedGame[] }>(folderId ? `/games?folderId=${folderId}` : "/games"),
+  listGames: (opts?: { folderId?: number; tagIds?: number[] }) => {
+    const params = new URLSearchParams();
+    if (opts?.folderId != null) params.set("folderId", String(opts.folderId));
+    if (opts?.tagIds && opts.tagIds.length > 0) {
+      params.set("tagIds", opts.tagIds.join(","));
+    }
+    const qs = params.toString();
+    return api<{ games: SavedGame[] }>(qs ? `/games?${qs}` : "/games");
+  },
 
   getGame: (id: number) => api<{ game: SavedGame }>(`/games/${id}`),
 
@@ -84,16 +100,45 @@ export const gamesApi = {
       body: JSON.stringify(payload),
     }),
 
-  moveGame: (id: number, folderId: number) =>
-    api<{ ok: boolean }>(`/games/${id}/folder`, {
-      method: "PATCH",
-      body: JSON.stringify({ folderId }),
+  addTagToGame: (gameId: number, tagId: number) =>
+    api<{ ok: boolean }>(`/games/${gameId}/tags`, {
+      method: "POST",
+      body: JSON.stringify({ tagId }),
     }),
 
-  // saves the top-to-bottom order for a folder's games.
-  reorderGames: (folderId: number, gameIds: number[]) =>
-    api<{ ok: boolean }>(`/games/reorder`, {
+  removeTagFromGame: (gameId: number, tagId: number) =>
+    api<{ ok: boolean }>(`/games/${gameId}/tags/${tagId}`, {
+      method: "DELETE",
+    }),
+
+  // rename players on an imported game.
+  updateGameNames: (
+    id: number,
+    names: { whiteName: string; blackName: string },
+  ) =>
+    api<{ ok: boolean }>(`/games/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ folderId, gameIds }),
+      body: JSON.stringify(names),
+    }),
+
+  // delete an imported game.
+  deleteGame: (id: number) =>
+    api<{ ok: boolean }>(`/games/${id}`, {
+      method: "DELETE",
+    }),
+};
+
+export const tagsApi = {
+  list: () => api<{ tags: GameTag[] }>("/tags"),
+
+  create: (name: string) =>
+    api<{ tag: GameTag }>("/tags", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
+
+  remove: (id: number) =>
+    api<{ ok: boolean }>(`/tags/${id}`, {
+      method: "DELETE",
     }),
 };

@@ -20,35 +20,6 @@
   letter-spacing: -0.025em;
 }
 
-.breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 1rem;
-  color: #4a5278;
-}
-
-.crumb {
-  text-decoration: none;
-  color: #4a5278;
-  border-radius: 6px;
-  padding: 0.1rem 0.32rem;
-  transition: background 120ms ease;
-}
-
-.crumb:hover {
-  background: rgba(120, 135, 200, 0.1);
-}
-
-.crumbSep {
-  color: #8a92b3;
-}
-
-.crumbCurrent {
-  color: #1f2744;
-  font-weight: 700;
-}
-
 .muted {
   margin: 0.15rem 0;
   color: #6a7090;
@@ -57,64 +28,71 @@
 
 .error {
   margin: 0.15rem 0;
-  color: #9d1b3a;
+  color: #9a2430;
   font-size: 0.95rem;
   font-weight: 600;
 }
 
-.folderList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* tag filters */
+
+.filterRow {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.folderItem {
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(225, 233, 255, 0.45));
-  box-shadow: 0 10px 28px rgba(80, 100, 170, 0.1);
-  transition: transform 90ms ease, box-shadow 140ms ease, border-color 140ms ease;
-}
-
-.folderItem:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 32px rgba(80, 100, 170, 0.18);
-  border-color: rgba(120, 135, 200, 0.45);
-}
-
-.folderLink {
-  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
-  text-decoration: none;
-  color: #1f2744;
 }
 
-.folderIcon {
-  flex-shrink: 0;
-  color: #4a5278;
-}
-
-.folderName {
-  flex: 1;
-  font-size: 1.12rem;
+.filterChip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: inherit;
+  font-size: 0.88rem;
   font-weight: 700;
-  letter-spacing: -0.005em;
+  color: #2c3556;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(140, 155, 215, 0.35);
+  border-radius: 999px;
+  padding: 0.32rem 0.75rem;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
 }
 
-.folderCount {
-  font-size: 0.92rem;
-  color: #5b6388;
-  font-variant-numeric: tabular-nums;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(140, 155, 215, 0.3);
-  border-radius: 999px;
-  padding: 0.18rem 0.6rem;
+.filterChip:hover {
+  border-color: rgba(45, 99, 226, 0.45);
+  background: rgba(232, 240, 255, 0.95);
+  color: #1e4fb8;
 }
+
+/* selected: dark blue ink on a soft blue fill — never white-on-white.
+   hover must not override this (`.filterChip:hover` is more specific). */
+.filterChipActive,
+.filterChipActive:hover {
+  background: rgba(45, 99, 226, 0.16);
+  color: #1a3f9c;
+  border-color: rgba(45, 99, 226, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(45, 99, 226, 0.18);
+  text-shadow: none;
+}
+
+.filterCount {
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.filterChipActive .filterCount {
+  opacity: 0.85;
+  color: inherit;
+}
+
+/* game list */
 
 .gameList {
   list-style: none;
@@ -127,18 +105,13 @@
 
 .gameItem {
   display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  flex-direction: column;
+  gap: 0.55rem;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.72);
   background: rgba(255, 255, 255, 0.72);
-  padding: 0.65rem 0.85rem;
-  transition:
-    background 120ms ease,
-    border-color 140ms ease,
-    transform 120ms ease,
-    box-shadow 140ms ease,
-    opacity 120ms ease;
+  padding: 0.7rem 0.9rem;
+  transition: background 120ms ease, border-color 140ms ease;
 }
 
 .gameItem:hover {
@@ -146,43 +119,21 @@
   border-color: rgba(120, 135, 200, 0.4);
 }
 
-.gameItemDraggable {
-  cursor: grab;
-}
-
-.gameItemDraggable:active {
-  cursor: grabbing;
-}
-
-.gameItemDragging {
-  opacity: 0.55;
-  transform: scale(0.985);
-  box-shadow: 0 10px 20px rgba(80, 100, 170, 0.18);
-}
-
-.gameItemDropTarget {
-  border-color: rgba(107, 127, 215, 0.72);
-  box-shadow: 0 0 0 2px rgba(107, 127, 215, 0.22);
-  background: rgba(255, 255, 255, 1);
-}
-
-.dragHandle {
-  color: rgba(90, 108, 165, 0.55);
-  font-size: 1.05rem;
-  letter-spacing: -0.15em;
-  padding: 0 0.15rem 0 0;
-  user-select: none;
-  flex-shrink: 0;
+.gameMain {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .gameLink {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  flex: 1;
   text-decoration: none;
   color: #1f2744;
   min-width: 0;
+  flex: 1;
 }
 
 .gameNames {
@@ -193,4 +144,223 @@
 .gameMeta {
   font-size: 0.92rem;
   color: #5b6388;
+}
+
+.gameActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.actionBtn {
+  appearance: none;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e4fb8;
+  background: rgba(45, 99, 226, 0.08);
+  border: 1px solid rgba(45, 99, 226, 0.28);
+  border-radius: 999px;
+  padding: 0.28rem 0.65rem;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.actionBtn:hover {
+  background: rgba(45, 99, 226, 0.16);
+  border-color: rgba(45, 99, 226, 0.45);
+}
+
+.actionDanger {
+  color: #9a2430;
+  background: rgba(198, 40, 40, 0.08);
+  border-color: rgba(198, 40, 40, 0.28);
+}
+
+.actionDanger:hover {
+  background: rgba(198, 40, 40, 0.14);
+  border-color: rgba(198, 40, 40, 0.45);
+}
+
+.nameEditRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.nameInput {
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1f2744;
+  padding: 0.35rem 0.55rem;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 135, 200, 0.45);
+  background: rgba(255, 255, 255, 0.95);
+  min-width: 0;
+  flex: 1 1 7rem;
+}
+
+.nameInput:focus-visible {
+  outline: 2px solid rgba(45, 99, 226, 0.5);
+  outline-offset: 1px;
+}
+
+.nameVs {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #6a7090;
+  flex-shrink: 0;
+}
+
+.nameSave,
+.nameCancel {
+  appearance: none;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.nameSave {
+  color: #fff;
+  background: linear-gradient(135deg, #59dcff 0%, #2d63e2 100%);
+  border-color: rgba(45, 99, 226, 0.55);
+}
+
+.nameSave:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.nameCancel {
+  color: #3d4566;
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(140, 155, 215, 0.4);
+}
+
+/* per-game tags */
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  border: 1px solid transparent;
+}
+
+.tagSystem {
+  color: #1e4fb8;
+  background: rgba(45, 99, 226, 0.12);
+  border-color: rgba(45, 99, 226, 0.35);
+}
+
+.tagCustom {
+  color: #3a4162;
+  background: rgba(140, 155, 215, 0.18);
+  border-color: rgba(140, 155, 215, 0.4);
+}
+
+.tagRemove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0 0 0 0.1rem;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.tagRemove:hover {
+  opacity: 1;
+}
+
+.tagAddWrap {
+  position: relative;
+}
+
+.tagAdd {
+  appearance: none;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  border: 1px dashed rgba(140, 155, 215, 0.55);
+  background: rgba(255, 255, 255, 0.7);
+  color: #4a5278;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.tagAdd:hover:not(:disabled) {
+  border-color: rgba(45, 99, 226, 0.55);
+  background: rgba(255, 255, 255, 1);
+  color: #2d63e2;
+}
+
+.tagAdd:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tagPicker {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  z-index: 15;
+  min-width: 8.5rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 14px 32px rgba(60, 80, 150, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tagPickerItem {
+  appearance: none;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2f3552;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tagPickerItem:hover {
+  background: rgba(45, 99, 226, 0.1);
+  color: #1e4fb8;
 }

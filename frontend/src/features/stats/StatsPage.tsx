@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  applyUciSequence,
+  initialGameState,
+  playStatus,
+} from "../../chess/game";
 import { useSettings } from "../../context/SettingsContext";
 import { gamesApi, type SavedGame } from "../../lib/api";
 import { lookupOpening } from "../../lib/openingsData";
@@ -7,17 +12,50 @@ import styles from "./StatsPage.module.css";
 
 type Outcome = "win" | "loss" | "draw";
 type Scope = "all" | "w" | "b";
+// games the player appeared in, including imports with no usable result yet.
+type PlayerGame = {
+  game: SavedGame;
+  side: "w" | "b";
+  outcome: Outcome | null;
+};
 
-// canonicalizes assorted result strings into a winner tag.
-function resultWinner(result: string): "w" | "b" | "draw" | null {
+// canonicalizes assorted result strings into a winner tag. covers platform
+// copy ("White wins · …"), PGN results ("1-0"), and common prose variants.
+function resultWinnerFromText(result: string): "w" | "b" | "draw" | null {
   const r = result.trim().toLowerCase();
-  if (!r) return null;
-  if (r === "1-0") return "w";
-  if (r === "0-1") return "b";
-  if (r === "1/2-1/2" || r.startsWith("draw")) return "draw";
-  if (r.startsWith("white wins")) return "w";
-  if (r.startsWith("black wins")) return "b";
+  if (!r || r === "*" || r === "imported pgn" || r === "unfinished") return null;
+  if (r === "1-0" || r.startsWith("1-0")) return "w";
+  if (r === "0-1" || r.startsWith("0-1")) return "b";
+  if (
+    r === "1/2-1/2" ||
+    r.startsWith("1/2") ||
+    r.includes("drawn") ||
+    r.startsWith("draw")
+  ) {
+    return "draw";
+  }
+  if (r.startsWith("white wins") || r.includes("white won")) return "w";
+  if (r.startsWith("black wins") || r.includes("black won")) return "b";
   return null;
+}
+
+// when the stored result string is useless (common for older imports), replay
+// the moves and read the terminal position.
+function resultWinnerFromMoves(ucis: readonly string[]): "w" | "b" | "draw" | null {
+  if (ucis.length === 0) return null;
+  const end = applyUciSequence(initialGameState(), ucis);
+  if (!end) return null;
+  const status = playStatus(end);
+  if (status === "stalemate") return "draw";
+  if (status === "checkmate") {
+    // sideToMove is the mated side, so the other colour won.
+    return end.sideToMove === "w" ? "b" : "w";
+  }
+  return null;
+}
+
+function resultWinner(game: SavedGame): "w" | "b" | "draw" | null {
+  return resultWinnerFromText(game.result) ?? resultWinnerFromMoves(game.ucis);
 }
 
 // which side (if any) did the player play in this game?
@@ -29,22 +67,22 @@ function playerSide(game: SavedGame, player: string): "w" | "b" | null {
   return null;
 }
 
-// interprets a saved game from the player's point of view. requires the game
-// to be attributable to `player` and to have a decoded result; otherwise null.
-function outcomeFor(
+// interprets a saved game from the player's point of view. returns null only
+// when the player didn't sit that board — missing results still count (outcome
+// null) so import-only players show up in the picker and length stats.
+function playerGame(
   game: SavedGame,
   player: string,
-): { outcome: Outcome; side: "w" | "b" } | null {
+): PlayerGame | null {
   const side = playerSide(game, player);
   if (!side) return null;
-  const w = resultWinner(game.result);
-  if (w == null) return null;
-  if (w === "draw") return { outcome: "draw", side };
-  return { outcome: w === side ? "win" : "loss", side };
+  const w = resultWinner(game);
+  if (w == null) return { game, side, outcome: null };
+  if (w === "draw") return { game, side, outcome: "draw" };
+  return { game, side, outcome: w === side ? "win" : "loss" };
 }
 
-// human summary of how a game ended. only the three "real" endings are
-// tracked; imported / unlabeled games are excluded from stats entirely.
+// human summary of how a game ended.
 function endingKind(result: string): "checkmate" | "resignation" | "stalemate" | null {
   const r = result.toLowerCase();
   if (r.includes("checkmate")) return "checkmate";
@@ -59,7 +97,6 @@ interface Row {
   hint?: string;
 }
 
-// small stat card (title + rows).
 function StatCard({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <section className={styles.card}>
@@ -79,8 +116,6 @@ function StatCard({ title, rows }: { title: string; rows: Row[] }) {
   );
 }
 
-// player switcher — appears in the header when the platform has more than
-// one non-engine player on record.
 function PlayerPicker({
   value,
   options,
@@ -108,7 +143,6 @@ function PlayerPicker({
   );
 }
 
-// three-color record bar for W / D / L.
 function RecordBar({ w, d, l }: { w: number; d: number; l: number }) {
   const total = w + d + l;
   if (total === 0) {
@@ -130,8 +164,8 @@ function RecordBar({ w, d, l }: { w: number; d: number; l: number }) {
   );
 }
 
-// segmented control for switching the Record card between the player's
-// total games and just the games they played as one colour.
+// segmented control that scopes the whole stats page — record, game length,
+// endings, and openings all recompute against the selected slice.
 function ScopeToggle({
   value,
   onChange,
@@ -169,16 +203,8 @@ function ScopeToggle({
   );
 }
 
-// engines never appear in the player picker. anything matching `stockfish`
-// (any suffix like "Stockfish 16.1") is treated as an engine. we also drop
-// the literal PGN placeholder names "white" / "black" that some imports
-// carry so they don't clutter the picker.
 function isEnginePlayer(name: string): boolean {
   return /^\s*stockfish\b/i.test(name);
-}
-function isPlaceholderColorName(name: string): boolean {
-  const n = name.trim().toLowerCase();
-  return n === "white" || n === "black";
 }
 
 export function StatsPage() {
@@ -186,10 +212,7 @@ export function StatsPage() {
 
   const [games, setGames] = useState<SavedGame[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // which player's stats are being shown. seeded from settings, but users
-  // can flip to any other player who has games on the platform.
   const [selectedPlayer, setSelectedPlayer] = useState<string>(settings.playerName);
-  // record-card scope filter: total, white-only, or black-only.
   const [scope, setScope] = useState<Scope>("all");
 
   useEffect(() => {
@@ -207,31 +230,24 @@ export function StatsPage() {
     };
   }, []);
 
-  // unique, non-engine, non-placeholder player names across every saved game,
-  // sorted for the dropdown. names are compared case-insensitively but we
-  // preserve the first-seen casing for display.
+  // every non-engine name that appears on any game — including imports with
+  // no Result tag / unfinished PGNs — so import-only players are selectable.
   const playerOptions = useMemo(() => {
     if (!games) return [] as string[];
     const seen = new Map<string, string>();
-    const consider = (raw: string) => {
-      const trimmed = raw.trim();
-      if (!trimmed) return;
-      if (isEnginePlayer(trimmed)) return;
-      if (isPlaceholderColorName(trimmed)) return;
-      const key = trimmed.toLowerCase();
-      if (!seen.has(key)) seen.set(key, trimmed);
-    };
     for (const g of games) {
-      consider(g.whiteName);
-      consider(g.blackName);
+      for (const raw of [g.whiteName, g.blackName]) {
+        const trimmed = raw.trim();
+        if (!trimmed || isEnginePlayer(trimmed)) continue;
+        const key = trimmed.toLowerCase();
+        if (!seen.has(key)) seen.set(key, trimmed);
+      }
     }
     return [...seen.values()].sort((a, b) =>
       a.localeCompare(b, undefined, { sensitivity: "base" }),
     );
   }, [games]);
 
-  // when the games load (or change), make sure the current selection is a
-  // real option. prefer the settings player, fall back to the first option.
   useEffect(() => {
     if (playerOptions.length === 0) return;
     const match = (needle: string) =>
@@ -249,50 +265,56 @@ export function StatsPage() {
 
   const player = selectedPlayer;
 
+  // every game this player sat, regardless of whether a result is known.
+  const playerGames = useMemo<PlayerGame[]>(() => {
+    if (!games) return [];
+    return games
+      .map((g) => playerGame(g, player))
+      .filter((v): v is PlayerGame => v !== null);
+  }, [games, player]);
+
+  const totals = useMemo(() => {
+    let w = 0;
+    let b = 0;
+    for (const a of playerGames) {
+      if (a.side === "w") w++;
+      else b++;
+    }
+    return { total: playerGames.length, w, b };
+  }, [playerGames]);
+
+  // whenever the underlying player changes, keep the scope selection valid.
+  useEffect(() => {
+    if (scope === "w" && totals.w === 0) setScope("all");
+    else if (scope === "b" && totals.b === 0) setScope("all");
+  }, [totals, scope]);
+
   const summary = useMemo(() => {
     if (!games) return null;
 
-    // only games attributable to the current player with a decoded result
-    // count toward the stats.
-    const attributed = games
-      .map((g) => {
-        const parsed = outcomeFor(g, player);
-        return parsed ? { game: g, ...parsed } : null;
-      })
-      .filter((v): v is { game: SavedGame; outcome: Outcome; side: "w" | "b" } => v !== null);
+    const scoped =
+      scope === "all"
+        ? playerGames
+        : playerGames.filter((a) => a.side === scope);
 
-    // per-side W/D/L breakdown feeds the record card's scope toggle.
-    const empty = { w: 0, d: 0, l: 0 };
-    const byScope: Record<Scope, { w: number; d: number; l: number }> = {
-      all: { ...empty },
-      w: { ...empty },
-      b: { ...empty },
-    };
-
+    let wins = 0;
+    let losses = 0;
+    let draws = 0;
     let totalHalfMoves = 0;
     let longestHalfMoves = 0;
     let shortestDecisiveHalfMoves = Number.POSITIVE_INFINITY;
     const endings = { checkmate: 0, resignation: 0, stalemate: 0 };
     const openingCounts = new Map<string, { eco: string; wins: number; total: number }>();
 
-    for (const { game: g, outcome, side } of attributed) {
-      const bucket = byScope[side];
-      const total = byScope.all;
-      if (outcome === "win") {
-        bucket.w++;
-        total.w++;
-      } else if (outcome === "loss") {
-        bucket.l++;
-        total.l++;
-      } else {
-        bucket.d++;
-        total.d++;
-      }
+    for (const { game: g, outcome } of scoped) {
+      if (outcome === "win") wins++;
+      else if (outcome === "loss") losses++;
+      else if (outcome === "draw") draws++;
 
       totalHalfMoves += g.ucis.length;
       longestHalfMoves = Math.max(longestHalfMoves, g.ucis.length);
 
-      const dec = resultWinner(g.result);
+      const dec = resultWinner(g);
       if (dec === "w" || dec === "b") {
         shortestDecisiveHalfMoves = Math.min(
           shortestDecisiveHalfMoves,
@@ -317,9 +339,15 @@ export function StatsPage() {
       .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
       .slice(0, 5);
 
+    const rated = wins + losses + draws;
+    const scored = wins + 0.5 * draws;
+    const scorePct = rated === 0 ? 0 : (scored / rated) * 100;
+
     return {
-      total: attributed.length,
-      byScope,
+      total: scoped.length,
+      wins,
+      losses,
+      draws,
       totalHalfMoves,
       longestHalfMoves,
       shortestDecisiveHalfMoves:
@@ -328,23 +356,9 @@ export function StatsPage() {
           : shortestDecisiveHalfMoves,
       endings,
       openingList,
+      scorePct,
     };
-  }, [games, player]);
-
-  // whenever the underlying player changes, keep the scope selection valid.
-  // e.g. flipping to a player who has never played black should not leave
-  // "As Black" active.
-  useEffect(() => {
-    if (!summary) return;
-    if (scope === "w" && summary.byScope.w.w + summary.byScope.w.d + summary.byScope.w.l === 0) {
-      setScope("all");
-    } else if (
-      scope === "b" &&
-      summary.byScope.b.w + summary.byScope.b.d + summary.byScope.b.l === 0
-    ) {
-      setScope("all");
-    }
-  }, [summary, scope]);
+  }, [playerGames, games, scope]);
 
   if (error) {
     return (
@@ -368,12 +382,16 @@ export function StatsPage() {
     );
   }
 
-  if (summary.total === 0) {
+  const disabledScopes = new Set<Scope>();
+  if (totals.w === 0) disabledScopes.add("w");
+  if (totals.b === 0) disabledScopes.add("b");
+
+  if (totals.total === 0) {
     return (
       <div className={styles.wrap}>
         <header className={styles.header}>
           <h1 className={styles.title}>Stats</h1>
-          {playerOptions.length > 1 ? (
+          {playerOptions.length > 0 ? (
             <PlayerPicker
               value={selectedPlayer}
               options={playerOptions}
@@ -393,24 +411,18 @@ export function StatsPage() {
     summary.total > 0 ? summary.totalHalfMoves / summary.total : 0;
   const avgMoves = avgHalfMoves / 2;
 
-  // active bucket for the record card based on the toggle.
-  const active = summary.byScope[scope];
-  const activeTotal = active.w + active.d + active.l;
-  const activeScored = active.w + 0.5 * active.d;
-  const activeScorePct = activeTotal === 0 ? 0 : (activeScored / activeTotal) * 100;
-  const disabledScopes = new Set<Scope>();
-  if (summary.byScope.w.w + summary.byScope.w.d + summary.byScope.w.l === 0) {
-    disabledScopes.add("w");
-  }
-  if (summary.byScope.b.w + summary.byScope.b.d + summary.byScope.b.l === 0) {
-    disabledScopes.add("b");
-  }
+  const scopeCountLabel =
+    scope === "all"
+      ? `${summary.total} ${summary.total === 1 ? "game" : "games"}`
+      : `${summary.total} ${summary.total === 1 ? "game" : "games"} as ${
+          scope === "w" ? "White" : "Black"
+        }`;
 
   return (
     <div className={styles.wrap}>
       <header className={styles.header}>
         <h1 className={styles.title}>Stats</h1>
-        {playerOptions.length > 1 ? (
+        {playerOptions.length > 0 ? (
           <PlayerPicker
             value={selectedPlayer}
             options={playerOptions}
@@ -421,37 +433,36 @@ export function StatsPage() {
             <strong>{player}</strong>
           </p>
         )}
-        <p className={styles.subtitle}>
-          {summary.total} {summary.total === 1 ? "game" : "games"} on record.
-        </p>
+        <div className={styles.headerToggleRow}>
+          <ScopeToggle
+            value={scope}
+            onChange={setScope}
+            disabledScopes={disabledScopes}
+          />
+        </div>
+        <p className={styles.subtitle}>{scopeCountLabel}.</p>
       </header>
 
       <section className={styles.recordCard}>
         <div className={styles.recordHead}>
           <h2 className={styles.cardTitle}>Record</h2>
           <span className={styles.recordScore}>
-            {activeScorePct.toFixed(1)}%{" "}
+            {summary.scorePct.toFixed(1)}%{" "}
             <span className={styles.recordScoreLabel}>score</span>
           </span>
         </div>
 
-        <ScopeToggle
-          value={scope}
-          onChange={setScope}
-          disabledScopes={disabledScopes}
-        />
-
-        <RecordBar w={active.w} d={active.d} l={active.l} />
+        <RecordBar w={summary.wins} d={summary.draws} l={summary.losses} />
 
         <div className={styles.recordCounts}>
           <span className={`${styles.pill} ${styles.pillWin}`}>
-            {active.w} <span>W</span>
+            {summary.wins} <span>W</span>
           </span>
           <span className={`${styles.pill} ${styles.pillDraw}`}>
-            {active.d} <span>D</span>
+            {summary.draws} <span>D</span>
           </span>
           <span className={`${styles.pill} ${styles.pillLoss}`}>
-            {active.l} <span>L</span>
+            {summary.losses} <span>L</span>
           </span>
         </div>
       </section>
@@ -462,11 +473,14 @@ export function StatsPage() {
           rows={[
             {
               label: "Avg moves / game",
-              value: avgMoves.toFixed(1),
+              value: summary.total === 0 ? "—" : avgMoves.toFixed(1),
             },
             {
               label: "Longest game",
-              value: `${Math.ceil(summary.longestHalfMoves / 2)} moves`,
+              value:
+                summary.longestHalfMoves === 0
+                  ? "—"
+                  : `${Math.ceil(summary.longestHalfMoves / 2)} moves`,
             },
             {
               label: "Shortest decisive",

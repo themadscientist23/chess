@@ -58,25 +58,21 @@ function migrate(database: Database.Database) {
     // column already exists
   }
 
-  // idempotent column add: `sort_index` allows drag-and-drop reordering
-  // inside a folder. lower values sort first. legacy rows get seeded to their
-  // negated id so newer games (higher ids) still float to the top.
-  //
-  // this must run before the `idx_games_sort` index is created, because on
-  // databases that predate this column the `CREATE TABLE IF NOT EXISTS games`
-  // above is a no-op and the column would still be missing.
+  // legacy column from a brief drag-sort experiment. kept for old DBs; unused.
   try {
     database.exec(
       `ALTER TABLE games ADD COLUMN sort_index INTEGER NOT NULL DEFAULT 0`,
     );
-    database.exec(`UPDATE games SET sort_index = -id WHERE sort_index = 0`);
   } catch {
     // column already exists
   }
 
-  database.exec(
-    `CREATE INDEX IF NOT EXISTS idx_games_sort ON games(folder_id, sort_index)`,
-  );
+  // soft-delete marker. NULL = live; ISO timestamp = deleted.
+  try {
+    database.exec(`ALTER TABLE games ADD COLUMN deleted_at TEXT`);
+  } catch {
+    // column already exists
+  }
 
   // seed the platform folder and lock it as system.
   database
@@ -97,5 +93,62 @@ function migrate(database: Database.Database) {
     if (usage.n === 0) {
       database.prepare(`DELETE FROM game_folders WHERE id = ?`).run(legacy.id);
     }
+  }
+
+  // tags: user- and system-defined labels applied to games. two system tags
+  // ("Played Here", "Imported") are seeded and auto-applied based on source.
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      is_system INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS game_tags (
+      game_id INTEGER NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+      tag_id  INTEGER NOT NULL REFERENCES tags(id)  ON DELETE CASCADE,
+      PRIMARY KEY (game_id, tag_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_game_tags_game ON game_tags(game_id);
+    CREATE INDEX IF NOT EXISTS idx_game_tags_tag  ON game_tags(tag_id);
+  `);
+
+  const seedTag = database.prepare(
+    `INSERT OR IGNORE INTO tags (name, is_system) VALUES (?, 1)`,
+  );
+  const markSystem = database.prepare(
+    `UPDATE tags SET is_system = 1 WHERE name = ?`,
+  );
+  for (const name of ["Played Here", "Imported"]) {
+    seedTag.run(name);
+    markSystem.run(name);
+  }
+
+  // backfill: every existing game must carry exactly one system tag. games
+  // with source='platform' get "Played Here"; everything else gets "Imported".
+  const playedTag = database
+    .prepare(`SELECT id FROM tags WHERE name = ?`)
+    .get("Played Here") as { id: number } | undefined;
+  const importedTag = database
+    .prepare(`SELECT id FROM tags WHERE name = ?`)
+    .get("Imported") as { id: number } | undefined;
+
+  if (playedTag && importedTag) {
+    database
+      .prepare(
+        `INSERT OR IGNORE INTO game_tags (game_id, tag_id)
+         SELECT id, ? FROM games
+         WHERE source = 'platform' AND deleted_at IS NULL`,
+      )
+      .run(playedTag.id);
+    database
+      .prepare(
+        `INSERT OR IGNORE INTO game_tags (game_id, tag_id)
+         SELECT id, ? FROM games
+         WHERE source <> 'platform' AND deleted_at IS NULL`,
+      )
+      .run(importedTag.id);
   }
 }

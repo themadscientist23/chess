@@ -3,6 +3,7 @@ import express from "express";
 
 import { getDb } from "./db/index.js";
 import { gamesRouter } from "./routes/games.js";
+import { tagsRouter } from "./routes/tags.js";
 
 const devOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 
@@ -20,6 +21,7 @@ export function createApp() {
   });
 
   app.use("/api/games", gamesRouter);
+  app.use("/api/tags", tagsRouter);
 
   return app;
 }
