@@ -8,13 +8,10 @@ import {
   type ReactNode,
 } from "react";
 
-export type DefaultOrientation = "white" | "black" | "auto";
-
 export interface AppSettings {
   playerName: string;
   themeHue: number;
   engineDepth: number;
-  defaultOrientation: DefaultOrientation;
   showMoveHints: boolean;
   highlightLastMove: boolean;
 }
@@ -24,7 +21,6 @@ interface SettingsContextValue {
   setPlayerName: (name: string) => void;
   setThemeHue: (hue: number) => void;
   setEngineDepth: (depth: number) => void;
-  setDefaultOrientation: (o: DefaultOrientation) => void;
   setShowMoveHints: (v: boolean) => void;
   setHighlightLastMove: (v: boolean) => void;
   reset: () => void;
@@ -44,7 +40,6 @@ const defaultSettings: AppSettings = {
   playerName: "Player",
   themeHue: 220,
   engineDepth: 18,
-  defaultOrientation: "auto",
   showMoveHints: true,
   highlightLastMove: true,
 };
@@ -60,11 +55,6 @@ const clampDepth = (n: unknown) =>
   typeof n === "number" && Number.isFinite(n)
     ? Math.max(ENGINE_DEPTH_MIN, Math.min(ENGINE_DEPTH_MAX, Math.round(n)))
     : defaultSettings.engineDepth;
-
-const sanitizeOrientation = (v: unknown): DefaultOrientation =>
-  v === "white" || v === "black" || v === "auto"
-    ? v
-    : defaultSettings.defaultOrientation;
 
 const sanitizeBool = (v: unknown, fallback: boolean) =>
   typeof v === "boolean" ? v : fallback;
@@ -83,7 +73,6 @@ function loadSettings(): AppSettings {
           : defaultSettings.playerName,
       themeHue: clampHue(parsed.themeHue),
       engineDepth: clampDepth(parsed.engineDepth),
-      defaultOrientation: sanitizeOrientation(parsed.defaultOrientation),
       showMoveHints: sanitizeBool(parsed.showMoveHints, defaultSettings.showMoveHints),
       highlightLastMove: sanitizeBool(
         parsed.highlightLastMove,
@@ -115,10 +104,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((prev) => ({ ...prev, engineDepth: clampDepth(depth) }));
   }, []);
 
-  const setDefaultOrientation = useCallback((o: DefaultOrientation) => {
-    setSettings((prev) => ({ ...prev, defaultOrientation: sanitizeOrientation(o) }));
-  }, []);
-
   const setShowMoveHints = useCallback((v: boolean) => {
     setSettings((prev) => ({ ...prev, showMoveHints: !!v }));
   }, []);
@@ -137,7 +122,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPlayerName,
       setThemeHue,
       setEngineDepth,
-      setDefaultOrientation,
       setShowMoveHints,
       setHighlightLastMove,
       reset,
@@ -147,7 +131,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPlayerName,
       setThemeHue,
       setEngineDepth,
-      setDefaultOrientation,
       setShowMoveHints,
       setHighlightLastMove,
       reset,

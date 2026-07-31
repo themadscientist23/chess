@@ -72,7 +72,7 @@
 
 .range {
   width: 100%;
-  accent-color: #6b7fd7;
+  accent-color: #2d63e2;
 }
 
 .select,
@@ -113,7 +113,7 @@
 .toggleInput {
   width: 1.15rem;
   height: 1.15rem;
-  accent-color: #6b7fd7;
+  accent-color: #2d63e2;
   cursor: pointer;
 }
 

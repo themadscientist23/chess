@@ -194,7 +194,7 @@
 }
 
 .toggle input {
-  accent-color: #6b7fd7;
+  accent-color: #2d63e2;
 }
 
 .boardWrap {
@@ -214,16 +214,18 @@
 }
 
 .board {
+  --sq: min(11vw, 76px);
   display: grid;
-  grid-template-columns: repeat(8, min(11vw, 58px));
-  grid-template-rows: repeat(8, min(11vw, 58px));
-  border-radius: 12px;
+  grid-template-columns: repeat(8, var(--sq));
+  grid-template-rows: repeat(8, var(--sq));
+  border-radius: 14px;
   overflow: hidden;
   user-select: none;
   box-shadow: inset 0 0 0 1px rgba(90, 110, 170, 0.12);
 }
 
 .square {
+  position: relative;
   border: none;
   margin: 0;
   padding: 0;
@@ -235,6 +237,36 @@
     background-color 0.18s ease,
     box-shadow 0.18s ease,
     filter 0.18s ease;
+}
+
+.coordRank,
+.coordFile {
+  position: absolute;
+  font-family: var(--nav-font);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+.coordRank {
+  top: 0.18rem;
+  left: 0.24rem;
+}
+
+.coordFile {
+  right: 0.24rem;
+  bottom: 0.16rem;
+}
+
+.coordLight {
+  color: rgba(232, 238, 255, 0.9);
+}
+
+.coordDark {
+  color: rgba(90, 108, 165, 0.75);
 }
 
 .square:focus-visible {
@@ -277,23 +309,24 @@
   height: 88%;
   object-fit: contain;
   pointer-events: none;
-  filter: drop-shadow(0 2px 6px rgba(60, 70, 120, 0.22));
 }
 
-.pawnWhite {
-  filter:
-    drop-shadow(0 2px 6px rgba(60, 70, 120, 0.22))
-    brightness(1.08)
-    saturate(0.12)
-    contrast(1.06);
+/* black silhouettes are already dark; a soft blue-ish drop shadow to keep
+   them from looking flat against dark squares. */
+.pieceBlack {
+  filter: drop-shadow(0 2px 6px rgba(60, 70, 120, 0.28));
 }
 
-.pawnBlack {
+/* white silhouettes are pure white and would disappear on light squares.
+   we stack tight dark drop-shadows in each direction to synthesize a thin
+   outline, then add the same soft ambient shadow the black pieces have. */
+.pieceWhite {
   filter:
-    drop-shadow(0 2px 6px rgba(60, 70, 120, 0.22))
-    brightness(0.36)
-    saturate(0.2)
-    contrast(1.25);
+    drop-shadow(0 0 0.6px rgba(30, 40, 70, 0.9))
+    drop-shadow(0 0 0.6px rgba(30, 40, 70, 0.9))
+    drop-shadow(0 0 0.6px rgba(30, 40, 70, 0.9))
+    drop-shadow(0 0 0.6px rgba(30, 40, 70, 0.9))
+    drop-shadow(0 2px 6px rgba(60, 70, 120, 0.35));
 }
 
 .promoteOverlay {

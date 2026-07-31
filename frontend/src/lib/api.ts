@@ -89,4 +89,11 @@ export const gamesApi = {
       method: "PATCH",
       body: JSON.stringify({ folderId }),
     }),
+
+  // saves the top-to-bottom order for a folder's games.
+  reorderGames: (folderId: number, gameIds: number[]) =>
+    api<{ ok: boolean }>(`/games/reorder`, {
+      method: "PATCH",
+      body: JSON.stringify({ folderId, gameIds }),
+    }),
 };

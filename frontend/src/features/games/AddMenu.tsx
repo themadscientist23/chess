@@ -1,29 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "../../components/ui/Button";
-import type { GameFolder } from "../../lib/api";
 import styles from "./AddMenu.module.css";
 
-type Mode = "closed" | "menu" | "newFolder" | "newGame";
+type Mode = "closed" | "newFolder";
 
 interface AddMenuProps {
-  folders: GameFolder[];
-  // when set, "New game" imports straight into this folder (no picker shown).
-  fixedFolderId?: number;
   onCreateFolder: (name: string) => Promise<void>;
-  onImportPgn: (folderId: number, pgnText: string) => Promise<void>;
 }
 
-export function AddMenu({
-  folders,
-  fixedFolderId,
-  onCreateFolder,
-  onImportPgn,
-}: AddMenuProps) {
+// A single-purpose "+" popover for creating a new folder. The games surface
+// intentionally exposes no other add flows — games are only ever created by
+// finishing a match on the Play page.
+export function AddMenu({ onCreateFolder }: AddMenuProps) {
   const [mode, setMode] = useState<Mode>("closed");
   const [folderName, setFolderName] = useState("");
-  const [pgn, setPgn] = useState("");
-  const [targetFolderId, setTargetFolderId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement | null>(null);
@@ -50,23 +41,7 @@ export function AddMenu({
     setMode("closed");
     setError(null);
     setFolderName("");
-    setPgn("");
     setSubmitting(false);
-  };
-
-  const openMenu = () => {
-    setError(null);
-    setMode("menu");
-  };
-
-  const openNewGame = () => {
-    setError(null);
-    if (fixedFolderId != null) {
-      setTargetFolderId(fixedFolderId);
-    } else {
-      setTargetFolderId(folders[0]?.id ?? null);
-    }
-    setMode("newGame");
   };
 
   const submitNewFolder = async () => {
@@ -83,55 +58,17 @@ export function AddMenu({
     }
   };
 
-  const submitNewGame = async () => {
-    if (targetFolderId == null) {
-      setError("Pick a folder first");
-      return;
-    }
-    if (!pgn.trim()) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await onImportPgn(targetFolderId, pgn.trim());
-      close();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not import PGN");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <button
         type="button"
         className={styles.fab}
-        aria-label="Add"
-        onClick={() => (mode === "closed" ? openMenu() : close())}
+        aria-label="New folder"
+        title="New folder"
+        onClick={() => (mode === "closed" ? setMode("newFolder") : close())}
       >
         +
       </button>
-
-      {mode === "menu" ? (
-        <div className={`${styles.popover} ${styles.menu}`}>
-          <button type="button" className={styles.menuItem} onClick={() => setMode("newFolder")}>
-            New folder
-          </button>
-          <button
-            type="button"
-            className={styles.menuItem}
-            onClick={openNewGame}
-            disabled={folders.length === 0 && fixedFolderId == null}
-            title={
-              folders.length === 0 && fixedFolderId == null
-                ? "Create a folder first"
-                : undefined
-            }
-          >
-            New game (paste PGN)
-          </button>
-        </div>
-      ) : null}
 
       {mode === "newFolder" ? (
         <div className={styles.popover}>
@@ -158,49 +95,6 @@ export function AddMenu({
               disabled={submitting || !folderName.trim()}
             >
               Create
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {mode === "newGame" ? (
-        <div className={styles.popover}>
-          <h3 className={styles.popTitle}>New game</h3>
-          {fixedFolderId == null ? (
-            <label className={styles.label}>
-              Folder
-              <select
-                className={styles.input}
-                value={targetFolderId ?? ""}
-                onChange={(e) => setTargetFolderId(Number(e.target.value))}
-              >
-                {folders.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <textarea
-            className={styles.textarea}
-            placeholder="Paste PGN here…"
-            value={pgn}
-            autoFocus
-            onChange={(e) => setPgn(e.target.value)}
-          />
-          {error ? <p className={styles.error}>{error}</p> : null}
-          <div className={styles.popActions}>
-            <Button variant="ghost" size="sm" onClick={close}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => void submitNewGame()}
-              disabled={submitting || !pgn.trim() || targetFolderId == null}
-            >
-              Add game
             </Button>
           </div>
         </div>

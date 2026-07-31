@@ -1,5 +1,5 @@
-// space-separated lowercase uci plies map to [eco code, opening name].
-// curated mainstream openings up to ~6 plies; falls back to longest known prefix.
+// space-separated lowercase uci moves map to [eco code, opening name].
+// curated mainstream openings up to ~6 half-moves; falls back to longest known prefix.
 export const OPENINGS_BY_UCI: Record<string, readonly [string, string]> = {
   "": ["—", "Starting position"],
 
@@ -121,8 +121,8 @@ export const OPENINGS_BY_UCI: Record<string, readonly [string, string]> = {
 };
 
 // finds the longest known prefix of the played sequence.
-export function lookupOpening(uciPlies: readonly string[]): { eco: string; name: string } {
-  const key = uciPlies.map((p) => p.toLowerCase()).join(" ");
+export function lookupOpening(uciMoves: readonly string[]): { eco: string; name: string } {
+  const key = uciMoves.map((p) => p.toLowerCase()).join(" ");
 
   const exact = OPENINGS_BY_UCI[key];
   if (exact) return { eco: exact[0], name: exact[1] };
@@ -141,4 +141,23 @@ export function lookupOpening(uciPlies: readonly string[]): { eco: string; name:
   }
 
   return { eco: "—", name: "Out of book" };
+}
+
+// pre-computed key list to keep book membership lookups cheap.
+const OPENING_KEYS = Object.keys(OPENINGS_BY_UCI).filter((k) => k.length > 0);
+
+// returns true if `sequence` is still inside the opening book: either the
+// exact sequence is a known opening, or some longer known opening starts
+// with it as a prefix. this is the correct notion for "book move" checks —
+// unlike `lookupOpening`, which only finds the longest known ancestor and
+// therefore stays positive long after the game has actually left theory.
+export function isSequenceInBook(uciMoves: readonly string[]): boolean {
+  if (uciMoves.length === 0) return true;
+  const seq = uciMoves.map((p) => p.toLowerCase()).join(" ");
+  const seqWithSep = `${seq} `;
+  for (const key of OPENING_KEYS) {
+    if (key === seq) return true;
+    if (key.startsWith(seqWithSep)) return true;
+  }
+  return false;
 }

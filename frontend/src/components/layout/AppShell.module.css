@@ -42,17 +42,26 @@
   text-decoration: none;
   font-size: 1.03rem;
   font-weight: 700;
-  padding: 0.45rem 0.85rem;
+  padding: 0.45rem 0.95rem;
   border-radius: 999px;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 90ms ease;
 }
 
 .links a:hover {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.62);
+  transform: translateY(-1px);
 }
 
 .active {
-  background: rgba(255, 255, 255, 0.72) !important;
-  box-shadow: 0 5px 16px rgba(107, 127, 215, 0.35);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(230, 240, 255, 0.78)) !important;
+  color: #1f2744 !important;
+  box-shadow:
+    0 6px 18px rgba(107, 127, 215, 0.35),
+    inset 0 0 0 1px rgba(107, 127, 215, 0.28);
 }
 
 .main {

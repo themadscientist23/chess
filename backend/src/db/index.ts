@@ -41,6 +41,7 @@ function migrate(database: Database.Database) {
       source TEXT NOT NULL DEFAULT 'platform',
       ucis_json TEXT NOT NULL,
       pretty_moves_json TEXT NOT NULL,
+      sort_index INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -56,6 +57,26 @@ function migrate(database: Database.Database) {
   } catch {
     // column already exists
   }
+
+  // idempotent column add: `sort_index` allows drag-and-drop reordering
+  // inside a folder. lower values sort first. legacy rows get seeded to their
+  // negated id so newer games (higher ids) still float to the top.
+  //
+  // this must run before the `idx_games_sort` index is created, because on
+  // databases that predate this column the `CREATE TABLE IF NOT EXISTS games`
+  // above is a no-op and the column would still be missing.
+  try {
+    database.exec(
+      `ALTER TABLE games ADD COLUMN sort_index INTEGER NOT NULL DEFAULT 0`,
+    );
+    database.exec(`UPDATE games SET sort_index = -id WHERE sort_index = 0`);
+  } catch {
+    // column already exists
+  }
+
+  database.exec(
+    `CREATE INDEX IF NOT EXISTS idx_games_sort ON games(folder_id, sort_index)`,
+  );
 
   // seed the platform folder and lock it as system.
   database

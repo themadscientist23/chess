@@ -77,23 +77,40 @@ export function ChessBoard({
               .filter(Boolean)
               .join(" ");
 
+            // rank/file labels on the perimeter, respecting perspective.
+            const viewRow = perspective === "w" ? r : 7 - r;
+            const viewCol = perspective === "w" ? c : 7 - c;
+            const showFile = viewRow === 7;
+            const showRank = viewCol === 0;
+            const fileChar = String.fromCharCode(97 + c);
+            const rankChar = String(8 - r);
+            const coordShade = light ? styles.coordDark : styles.coordLight;
+
             return (
               <button
                 type="button"
                 key={`${idx}-${r}-${c}`}
                 className={className}
-                aria-label={`Square ${String.fromCharCode(97 + c)}${8 - r}`}
+                aria-label={`Square ${fileChar}${rankChar}`}
                 disabled={!interactive}
                 onClick={() => interactive && onSquareClick(r, c)}
               >
+                {showRank ? (
+                  <span className={`${styles.coordRank} ${coordShade}`} aria-hidden>
+                    {rankChar}
+                  </span>
+                ) : null}
+                {showFile ? (
+                  <span className={`${styles.coordFile} ${coordShade}`} aria-hidden>
+                    {fileChar}
+                  </span>
+                ) : null}
                 {cell ? (
                   <img
                     className={[
                       styles.pieceImg,
-                      cell.type === "P" ? (cell.color === "w" ? styles.pawnWhite : styles.pawnBlack) : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
+                      cell.color === "w" ? styles.pieceWhite : styles.pieceBlack,
+                    ].join(" ")}
                     src={pieceImageSrc(cell.color, cell.type)}
                     alt=""
                     draggable={false}

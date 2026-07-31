@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
   applyUci,
@@ -34,7 +35,7 @@ const START_CLOCK_MS = 10 * 60 * 1000;
 
 type PlayMode = "pvp" | "ai";
 type ViewState = "setup" | "playing" | "finished";
-type PlyRecord = { uci: string; pretty: string; mover: Color };
+type MoveRecord = { uci: string; pretty: string; mover: Color };
 
 // short status banner shown above the board.
 function statusMessage(
@@ -50,16 +51,13 @@ function statusMessage(
     if (mode === "ai" && engineOn && game.sideToMove !== humanColor) {
       return "Stockfish is thinking…";
     }
-    if (mode === "pvp") {
-      return `${game.sideToMove === "w" ? "White" : "Black"} to move (local)`;
-    }
-    return "Your move";
+    return `${game.sideToMove === "w" ? "White" : "Black"} to move`;
   }
 
-  if (s === "stalemate") return "Stalemate — draw";
+  if (s === "stalemate") return "Draw · Stalemate";
 
   const winner: Color = game.sideToMove === "w" ? "b" : "w";
-  return `Checkmate — ${winner === "w" ? "White" : "Black"} wins`;
+  return `${winner === "w" ? "White" : "Black"} wins · Checkmate`;
 }
 
 export function PlayPage() {
@@ -70,6 +68,9 @@ export function PlayPage() {
   const [playMode, setPlayMode] = useState<PlayMode>("ai");
   const [humanColor, setHumanColor] = useState<Color>("w");
   const [engineOn] = useState(true);
+  // when playing Stockfish, users can decide whether to run clocks at all.
+  // in local pvp this is ignored (clocks always tick for both sides).
+  const [useClock, setUseClock] = useState(true);
   const [opponentName, setOpponentName] = useState("Opponent");
   const [whiteName, setWhiteName] = useState(username);
   const [blackName, setBlackName] = useState("Stockfish");
@@ -77,12 +78,16 @@ export function PlayPage() {
   const [editingBlack, setEditingBlack] = useState(false);
   const [resultText, setResultText] = useState<string | null>(null);
   const [platformFolderId, setPlatformFolderId] = useState<number>(1);
+  const [savedGameId, setSavedGameId] = useState<number | null>(null);
 
   const [game, setGame] = useState<GameState>(() => initialGameState());
   const [selected, setSelected] = useState<Coord | null>(null);
   const [lastMove, setLastMove] = useState<{ from: Coord; to: Coord } | null>(null);
   const [promote, setPromote] = useState<{ from: Coord; to: Coord } | null>(null);
-  const [plies, setPlies] = useState<PlyRecord[]>([]);
+  const [moveHistory, setMoveHistory] = useState<MoveRecord[]>([]);
+  // engine's self-reported UCI id name (e.g. "Stockfish 16.1"). shown as the
+  // opponent's display name whenever the human is playing the AI.
+  const [engineName, setEngineName] = useState<string>("Stockfish");
 
   const [whiteMs, setWhiteMs] = useState(START_CLOCK_MS);
   const [blackMs, setBlackMs] = useState(START_CLOCK_MS);
@@ -92,6 +97,9 @@ export function PlayPage() {
   const onBestMoveRef = useRef<(uci: string | null) => void>(() => {});
   const sfRef = useRef<StockfishHandle | null>(null);
   const engineSearchRef = useRef(false);
+  // holds the timeout that defers Stockfish's move so replies never feel
+  // instantaneous. cleared on reset / disposal.
+  const engineMoveTimerRef = useRef<number | null>(null);
   const [engineEpoch, setEngineEpoch] = useState(0);
 
   const gameRef = useRef(game);
@@ -121,7 +129,7 @@ export function PlayPage() {
 
   const status = playStatus(game);
   const turn = game.sideToMove;
-  const opening = useOpening(plies.map((p) => p.uci));
+  const opening = useOpening(moveHistory.map((m) => m.uci));
 
   const highlights = useMemo(() => {
     if (!selected) return new Map<string, Coord>();
@@ -133,10 +141,10 @@ export function PlayPage() {
     return map;
   }, [game, selected]);
 
-  const appendPly = useCallback((gameBefore: GameState, uci: string) => {
+  const appendMove = useCallback((gameBefore: GameState, uci: string) => {
     const mover = gameBefore.sideToMove;
     const pretty = prettyFromUci(gameBefore, uci);
-    setPlies((prev) => [...prev, { uci, pretty, mover }]);
+    setMoveHistory((prev) => [...prev, { uci, pretty, mover }]);
   }, []);
 
   const onEngineBestMove = useCallback(
@@ -147,17 +155,27 @@ export function PlayPage() {
       if (!uci) return;
       if (viewRef.current !== "playing") return;
 
-      const g = gameRef.current;
-      const next = applyUci(g, uci);
-      if (!next) return;
+      // impose a small minimum "thinking" pause so Stockfish never snaps a
+      // reply out instantly at shallow depths. any pending timer is replaced.
+      if (engineMoveTimerRef.current != null) {
+        window.clearTimeout(engineMoveTimerRef.current);
+      }
+      engineMoveTimerRef.current = window.setTimeout(() => {
+        engineMoveTimerRef.current = null;
+        if (viewRef.current !== "playing") return;
 
-      setGame(next);
-      appendPly(g, uci);
+        const g = gameRef.current;
+        const next = applyUci(g, uci);
+        if (!next) return;
 
-      const parsed = parseUciMove(uci);
-      if (parsed) setLastMove({ from: parsed.from, to: parsed.to });
+        setGame(next);
+        appendMove(g, uci);
+
+        const parsed = parseUciMove(uci);
+        if (parsed) setLastMove({ from: parsed.from, to: parsed.to });
+      }, 1000);
     },
-    [appendPly],
+    [appendMove],
   );
 
   // keep the ref handler current without rebuilding the worker.
@@ -170,6 +188,12 @@ export function PlayPage() {
   useEffect(() => {
     const handle = createStockfish({
       onBestMove: (uci) => onBestMoveRef.current(uci),
+      onIdName: (name) => {
+        // trim any trailing build metadata after a space+parenthetical, keep
+        // it snappy: "Stockfish 16.1 by X" -> "Stockfish 16.1".
+        const clean = name.replace(/\s+by\s+.+$/i, "").trim() || name;
+        setEngineName(clean);
+      },
       onDiag: (d: StockfishDiag) => {
         const fatal =
           d.tag === "worker_error" ||
@@ -192,6 +216,10 @@ export function PlayPage() {
     return () => {
       sfRef.current = null;
       engineSearchRef.current = false;
+      if (engineMoveTimerRef.current != null) {
+        window.clearTimeout(engineMoveTimerRef.current);
+        engineMoveTimerRef.current = null;
+      }
       handle.dispose();
       console.debug("[play] engine disposed", { epoch: engineEpoch });
     };
@@ -226,24 +254,55 @@ export function PlayPage() {
   const resetToSetup = useCallback(() => {
     sfRef.current?.stop();
     engineSearchRef.current = false;
+    if (engineMoveTimerRef.current != null) {
+      window.clearTimeout(engineMoveTimerRef.current);
+      engineMoveTimerRef.current = null;
+    }
     setGame(initialGameState());
     setSelected(null);
     setLastMove(null);
     setPromote(null);
-    setPlies([]);
+    setMoveHistory([]);
     setWhiteMs(START_CLOCK_MS);
     setBlackMs(START_CLOCK_MS);
     setResultText(null);
     savedRef.current = false;
+    setSavedGameId(null);
     setView("setup");
   }, []);
 
   const startGame = useCallback(() => {
     resetToSetup();
-    setWhiteName(username || "Player");
-    setBlackName(playMode === "ai" ? "Stockfish" : opponentName.trim() || "Opponent");
+    const player = username || "Player";
+    if (playMode === "ai") {
+      // in AI mode, whichever colour the human picked wears the player's
+      // name; the opposite colour is Stockfish (with its detected version,
+      // when the engine has already reported it).
+      if (humanColor === "w") {
+        setWhiteName(player);
+        setBlackName(engineName);
+      } else {
+        setWhiteName(engineName);
+        setBlackName(player);
+      }
+    } else {
+      setWhiteName(player);
+      setBlackName(opponentName.trim() || "Opponent");
+    }
     setView("playing");
-  }, [opponentName, playMode, resetToSetup, username]);
+  }, [engineName, humanColor, opponentName, playMode, resetToSetup, username]);
+
+  // when the engine reports its full id (which can arrive after startGame),
+  // upgrade the Stockfish label — but only if the user hasn't typed a custom
+  // name over it.
+  useEffect(() => {
+    if (view !== "playing" || playMode !== "ai") return;
+    if (humanColor === "w") {
+      setBlackName((cur) => (cur === "Stockfish" ? engineName : cur));
+    } else {
+      setWhiteName((cur) => (cur === "Stockfish" ? engineName : cur));
+    }
+  }, [engineName, humanColor, playMode, view]);
 
   const finishPromotion = useCallback(
     (p: PieceType) => {
@@ -254,13 +313,13 @@ export function PlayPage() {
       if (next) {
         setGame(next);
         setLastMove({ from: promote.from, to: promote.to });
-        appendPly(game, uci);
+        appendMove(game, uci);
       }
 
       setPromote(null);
       setSelected(null);
     },
-    [appendPly, game, promote],
+    [appendMove, game, promote],
   );
 
   const onSquareClick = useCallback(
@@ -287,7 +346,7 @@ export function PlayPage() {
           if (next) {
             setGame(next);
             setLastMove({ from: selected, to: target });
-            appendPly(game, uci);
+            appendMove(game, uci);
             setSelected(null);
           }
           return;
@@ -302,7 +361,7 @@ export function PlayPage() {
       setSelected(null);
     },
     [
-      appendPly,
+      appendMove,
       game,
       highlights,
       playMode,
@@ -319,7 +378,7 @@ export function PlayPage() {
   const onResign = useCallback(() => {
     if (view !== "playing") return;
     const winner = opposite(game.sideToMove);
-    setResultText(`${winner === "w" ? "White" : "Black"} wins by resignation`);
+    setResultText(`${winner === "w" ? "White" : "Black"} wins · Resignation`);
     setView("finished");
   }, [game.sideToMove, view]);
 
@@ -329,37 +388,57 @@ export function PlayPage() {
     if (status === "playing") return;
 
     if (status === "stalemate") {
-      setResultText("Draw by stalemate");
+      setResultText("Draw · Stalemate");
     } else {
       const winner: Color = game.sideToMove === "w" ? "b" : "w";
-      setResultText(`${winner === "w" ? "White" : "Black"} wins by checkmate`);
+      setResultText(`${winner === "w" ? "White" : "Black"} wins · Checkmate`);
     }
     setView("finished");
   }, [game.sideToMove, status, view]);
 
-  // persist the game once when it finishes.
+  // persist the game once when it finishes, then remember the id for the
+  // "review this game" link.
   useEffect(() => {
     if (view !== "finished") return;
     if (savedRef.current) return;
-    if (plies.length === 0) return;
+    if (moveHistory.length === 0) return;
 
     savedRef.current = true;
-    void gamesApi.createGame({
-      folderId: platformFolderId,
-      mode: playMode,
-      whiteName,
-      blackName,
-      result: resultText ?? "finished",
-      source: "platform",
-      ucis: plies.map((p) => p.uci),
-      prettyMoves: plies.map((p) => p.pretty),
-    });
-  }, [blackName, platformFolderId, playMode, plies, resultText, view, whiteName]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { gameId } = await gamesApi.createGame({
+          folderId: platformFolderId,
+          mode: playMode,
+          whiteName,
+          blackName,
+          result: resultText ?? "finished",
+          source: "platform",
+          ucis: moveHistory.map((m) => m.uci),
+          prettyMoves: moveHistory.map((m) => m.pretty),
+        });
+        if (!cancelled) setSavedGameId(gameId);
+      } catch (err) {
+        console.warn("[play] could not save game", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [blackName, moveHistory, platformFolderId, playMode, resultText, view, whiteName]);
 
-  // tick clocks for the side to move while play is in progress.
+  // tick clocks for the side to move while play is in progress. in AI mode
+  // clocks only ever run when the toggle is on AND it's the human's turn —
+  // Stockfish never runs down a clock.
   const lastTickRef = useRef<number | null>(null);
   useEffect(() => {
     if (view !== "playing" || status !== "playing") {
+      lastTickRef.current = null;
+      return;
+    }
+
+    // no clocks at all when playing Stockfish with the toggle off.
+    if (playMode === "ai" && !useClock) {
       lastTickRef.current = null;
       return;
     }
@@ -374,7 +453,12 @@ export function PlayPage() {
       }
       const dt = now - last;
       lastTickRef.current = now;
-      if (gameRef.current.sideToMove === "w") {
+
+      const sideOnMove = gameRef.current.sideToMove;
+      // don't burn Stockfish's clock even if the toggle is on.
+      if (playMode === "ai" && sideOnMove !== humanColor) return;
+
+      if (sideOnMove === "w") {
         setWhiteMs((v) => v - dt);
       } else {
         setBlackMs((v) => v - dt);
@@ -382,28 +466,28 @@ export function PlayPage() {
     }, 200);
 
     return () => window.clearInterval(id);
-  }, [turn, status, view]);
+  }, [turn, status, view, playMode, useClock, humanColor]);
 
   const moveRows = useMemo(() => {
     const rows: Array<{ n: number; w: string; b: string }> = [];
-    for (let i = 0; i < plies.length; i += 2) {
+    for (let i = 0; i < moveHistory.length; i += 2) {
       rows.push({
         n: i / 2 + 1,
-        w: plies[i]?.pretty ?? "",
-        b: plies[i + 1]?.pretty ?? "",
+        w: moveHistory[i]?.pretty ?? "",
+        b: moveHistory[i + 1]?.pretty ?? "",
       });
     }
     return rows;
-  }, [plies]);
+  }, [moveHistory]);
 
   const [flipped, setFlipped] = useState(false);
 
-  // base perspective: explicit override from settings, else follow human side.
-  const basePerspective: Color = useMemo(() => {
-    if (settings.defaultOrientation === "white") return "w";
-    if (settings.defaultOrientation === "black") return "b";
-    return playMode === "ai" ? humanColor : "w";
-  }, [settings.defaultOrientation, playMode, humanColor]);
+  // base perspective follows the human side in AI games; in local pvp we
+  // start from white and let the user flip manually.
+  const basePerspective: Color = useMemo(
+    () => (playMode === "ai" ? humanColor : "w"),
+    [playMode, humanColor],
+  );
 
   // final perspective applies the user's manual flip on top.
   const perspective: Color = flipped
@@ -430,7 +514,12 @@ export function PlayPage() {
         <div className={styles.setupCard}>
           <h1 className={styles.h1}>Play</h1>
           <p className={styles.p}>
-            Choose a mode, then start the game. Clocks start at 10:00.
+            Pick a mode and start.{" "}
+            {playMode === "pvp"
+              ? "Both sides get 10 minutes on the clock."
+              : useClock
+                ? "You get 10 minutes on the clock — Stockfish plays untimed."
+                : "No clock — take as long as you want."}
           </p>
 
           <div className={styles.setupRow}>
@@ -441,7 +530,7 @@ export function PlayPage() {
                 checked={playMode === "pvp"}
                 onChange={() => setPlayMode("pvp")}
               />
-              <span>Local both sides</span>
+              <span>Local (both sides)</span>
             </label>
             <label className={styles.radio}>
               <input
@@ -450,31 +539,43 @@ export function PlayPage() {
                 checked={playMode === "ai"}
                 onChange={() => setPlayMode("ai")}
               />
-              <span>vs Stockfish</span>
+              <span>vs. Stockfish</span>
             </label>
           </div>
 
           {playMode === "ai" ? (
-            <div className={styles.setupRow}>
-              <label className={styles.radio}>
-                <input
-                  type="radio"
-                  name="hum"
-                  checked={humanColor === "w"}
-                  onChange={() => setHumanColor("w")}
-                />
-                <span>You play White</span>
-              </label>
-              <label className={styles.radio}>
-                <input
-                  type="radio"
-                  name="hum"
-                  checked={humanColor === "b"}
-                  onChange={() => setHumanColor("b")}
-                />
-                <span>You play Black</span>
-              </label>
-            </div>
+            <>
+              <div className={styles.setupRow}>
+                <label className={styles.radio}>
+                  <input
+                    type="radio"
+                    name="hum"
+                    checked={humanColor === "w"}
+                    onChange={() => setHumanColor("w")}
+                  />
+                  <span>You play White</span>
+                </label>
+                <label className={styles.radio}>
+                  <input
+                    type="radio"
+                    name="hum"
+                    checked={humanColor === "b"}
+                    onChange={() => setHumanColor("b")}
+                  />
+                  <span>You play Black</span>
+                </label>
+              </div>
+              <div className={styles.setupRow}>
+                <label className={styles.radio}>
+                  <input
+                    type="checkbox"
+                    checked={useClock}
+                    onChange={(e) => setUseClock(e.target.checked)}
+                  />
+                  <span>Use clock (10 min)</span>
+                </label>
+              </div>
+            </>
           ) : (
             <div className={styles.setupRow}>
               <label className={styles.label}>
@@ -499,6 +600,20 @@ export function PlayPage() {
   const topClockMs = perspective === "w" ? blackMs : whiteMs;
   const bottomClockMs = perspective === "w" ? whiteMs : blackMs;
 
+  // active player highlight only lights up while the game is actually in play.
+  const isLive = view === "playing" && status === "playing";
+  const topColor: Color = perspective === "w" ? "b" : "w";
+  const bottomColor: Color = perspective === "w" ? "w" : "b";
+  const topActive = isLive && turn === topColor;
+  const bottomActive = isLive && turn === bottomColor;
+
+  // clocks: always on in local pvp; in AI mode they only appear on the
+  // human's side and only when the clock toggle was enabled at setup.
+  const showTopClock =
+    playMode === "pvp" || (useClock && topColor === humanColor);
+  const showBottomClock =
+    playMode === "pvp" || (useClock && bottomColor === humanColor);
+
   return (
     <div className={styles.playWrap}>
       <header className={styles.playHeader}>
@@ -516,33 +631,44 @@ export function PlayPage() {
 
       <div className={styles.centerRow}>
         <div className={styles.boardCol}>
-          <div className={styles.nameBarTop}>
-            {editingBlack || editingWhite ? (
-              <input
-                className={styles.nameEdit}
-                value={perspective === "w" ? blackName : whiteName}
-                onChange={(e) => {
-                  if (perspective === "w") setBlackName(e.target.value);
-                  else setWhiteName(e.target.value);
-                }}
-                onBlur={() => {
-                  setEditingWhite(false);
-                  setEditingBlack(false);
-                }}
-                autoFocus
-              />
-            ) : (
+          <div
+            className={`${styles.nameBarTop} ${topActive ? styles.nameBarActive : ""}`}
+            aria-current={topActive ? "true" : undefined}
+          >
+            <span className={styles.nameSide}>
               <span
-                className={styles.name}
-                onDoubleClick={() => {
-                  if (perspective === "w") setEditingBlack(true);
-                  else setEditingWhite(true);
-                }}
-              >
-                {topLabel}
-              </span>
-            )}
-            <span className={styles.clock}>{formatClock(topClockMs)}</span>
+                className={`${styles.turnDot} ${topActive ? styles.turnDotActive : ""}`}
+                aria-hidden
+              />
+              {editingBlack || editingWhite ? (
+                <input
+                  className={styles.nameEdit}
+                  value={perspective === "w" ? blackName : whiteName}
+                  onChange={(e) => {
+                    if (perspective === "w") setBlackName(e.target.value);
+                    else setWhiteName(e.target.value);
+                  }}
+                  onBlur={() => {
+                    setEditingWhite(false);
+                    setEditingBlack(false);
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <span
+                  className={styles.name}
+                  onDoubleClick={() => {
+                    if (perspective === "w") setEditingBlack(true);
+                    else setEditingWhite(true);
+                  }}
+                >
+                  {topLabel}
+                </span>
+              )}
+            </span>
+            {showTopClock ? (
+              <span className={styles.clock}>{formatClock(topClockMs)}</span>
+            ) : null}
           </div>
 
           <ChessBoard
@@ -557,33 +683,44 @@ export function PlayPage() {
             perspective={perspective}
           />
 
-          <div className={styles.nameBarBottom}>
-            {editingWhite || editingBlack ? (
-              <input
-                className={styles.nameEdit}
-                value={perspective === "w" ? whiteName : blackName}
-                onChange={(e) => {
-                  if (perspective === "w") setWhiteName(e.target.value);
-                  else setBlackName(e.target.value);
-                }}
-                onBlur={() => {
-                  setEditingWhite(false);
-                  setEditingBlack(false);
-                }}
-                autoFocus
-              />
-            ) : (
+          <div
+            className={`${styles.nameBarBottom} ${bottomActive ? styles.nameBarActive : ""}`}
+            aria-current={bottomActive ? "true" : undefined}
+          >
+            <span className={styles.nameSide}>
               <span
-                className={styles.name}
-                onDoubleClick={() => {
-                  if (perspective === "w") setEditingWhite(true);
-                  else setEditingBlack(true);
-                }}
-              >
-                {bottomLabel}
-              </span>
-            )}
-            <span className={styles.clock}>{formatClock(bottomClockMs)}</span>
+                className={`${styles.turnDot} ${bottomActive ? styles.turnDotActive : ""}`}
+                aria-hidden
+              />
+              {editingWhite || editingBlack ? (
+                <input
+                  className={styles.nameEdit}
+                  value={perspective === "w" ? whiteName : blackName}
+                  onChange={(e) => {
+                    if (perspective === "w") setWhiteName(e.target.value);
+                    else setBlackName(e.target.value);
+                  }}
+                  onBlur={() => {
+                    setEditingWhite(false);
+                    setEditingBlack(false);
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <span
+                  className={styles.name}
+                  onDoubleClick={() => {
+                    if (perspective === "w") setEditingWhite(true);
+                    else setEditingBlack(true);
+                  }}
+                >
+                  {bottomLabel}
+                </span>
+              )}
+            </span>
+            {showBottomClock ? (
+              <span className={styles.clock}>{formatClock(bottomClockMs)}</span>
+            ) : null}
           </div>
         </div>
 
@@ -613,9 +750,25 @@ export function PlayPage() {
                 Resign
               </Button>
             ) : null}
-            <Button variant="ghost" disabled>
-              Post-game review (from Games)
-            </Button>
+            {view === "finished" && savedGameId != null ? (
+              <Link to={`/games/${savedGameId}`} className={styles.reviewLink}>
+                <Button variant="primary" size="md" aria-label="Review this game">
+                  Review this game →
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                variant="ghost"
+                disabled
+                title={
+                  view === "finished"
+                    ? "Saving game…"
+                    : "Available after the game ends"
+                }
+              >
+                {view === "finished" ? "Saving…" : "Review after finish"}
+              </Button>
+            )}
             <Button
               variant="secondary"
               onClick={resetToSetup}

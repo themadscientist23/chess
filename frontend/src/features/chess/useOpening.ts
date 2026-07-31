@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { lookupOpening } from "../../lib/openingsData";
 
-export function useOpening(uciPlies: readonly string[]) {
-  const key = uciPlies.join(" ");
-  return useMemo(() => lookupOpening(uciPlies), [key]);
+export function useOpening(uciMoves: readonly string[]) {
+  const key = uciMoves.join(" ");
+  return useMemo(() => lookupOpening(uciMoves), [key]);
 }

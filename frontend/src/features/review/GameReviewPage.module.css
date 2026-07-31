@@ -82,6 +82,82 @@
   padding: 1.05rem 1.1rem 1.2rem;
 }
 
+.evalPanel {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px dashed rgba(140, 155, 215, 0.35);
+}
+
+.graphSvg {
+  display: block;
+  width: 100%;
+  height: 96px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(140, 155, 215, 0.28);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.graphEmpty {
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6a7090;
+  font-size: 0.92rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px dashed rgba(140, 155, 215, 0.36);
+}
+
+.accuracyRow {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.6rem;
+}
+
+.accPill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.7rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(140, 155, 215, 0.28);
+}
+
+.accLabel {
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4a5278;
+}
+
+.accVal {
+  font-size: 1.02rem;
+  color: #2c3556;
+  font-weight: 800;
+}
+
+.accWhite {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(232, 240, 255, 0.7));
+}
+
+.accBlack {
+  background: linear-gradient(180deg, rgba(48, 58, 90, 0.95), rgba(30, 38, 66, 0.9));
+  border-color: rgba(30, 40, 70, 0.55);
+}
+.accBlack .accLabel {
+  color: rgba(230, 236, 255, 0.72);
+}
+.accBlack .accVal {
+  color: #f4f7ff;
+}
+
+
 .panelHead {
   display: flex;
   align-items: baseline;
@@ -319,16 +395,43 @@
   background: linear-gradient(135deg, #ef5350, #c62828);
 }
 
+.book {
+  background: rgba(160, 132, 96, 0.18);
+  border-color: rgba(140, 110, 76, 0.42);
+}
+.badge_book {
+  background: linear-gradient(135deg, #a1887f, #6d4c41);
+  font-size: 0.68rem;
+}
+
+.excellent {
+  background: rgba(38, 198, 218, 0.18);
+  border-color: rgba(38, 166, 154, 0.4);
+}
+.badge_excellent {
+  background: linear-gradient(135deg, #26c6da, #0097a7);
+}
+
+.miss {
+  background: rgba(255, 138, 101, 0.32);
+  border-color: rgba(230, 74, 25, 0.52);
+}
+.badge_miss {
+  background: linear-gradient(135deg, #ff7043, #d84315);
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem 0.7rem;
   align-items: center;
+  justify-content: center;
   margin-top: 0.85rem;
   padding-top: 0.65rem;
   border-top: 1px dashed rgba(140, 155, 215, 0.35);
   font-size: 0.83rem;
   color: #4a5278;
+  text-align: center;
 }
 
 .legendItem {

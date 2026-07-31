@@ -675,7 +675,7 @@ export function toFen(game: GameState): string {
   return `${rows.join("/")} ${turn} ${cast} ${ep} ${game.halfmoveClock} ${game.fullmoveNumber}`;
 }
 
-// one ply in a saved game (uci + fen snapshots for replay / pgn).
+// one half-move in a saved game (uci + fen snapshots for replay / pgn).
 export interface RecordedMove {
   uci: string;
   fenBefore: string;
@@ -692,8 +692,8 @@ export function applyUciSequence(start: GameState, ucis: readonly string[]): Gam
   return g;
 }
 
-// replays the game state up to `moveIndex` plies (0 = start position).
-export function replayToPly(start: GameState, ucis: readonly string[], moveIndex: number): GameState {
+// replays the game state up to `moveIndex` half-moves (0 = start position).
+export function replayToMove(start: GameState, ucis: readonly string[], moveIndex: number): GameState {
   const n = Math.max(0, Math.min(moveIndex, ucis.length));
   const applied = applyUciSequence(start, ucis.slice(0, n));
   return applied ?? start;

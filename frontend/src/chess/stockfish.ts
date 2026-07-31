@@ -4,6 +4,9 @@ export interface StockfishHandle {
   dispose: () => void;
   // whether the worker has reported a fatal error or timeout.
   isDead: () => boolean;
+  // last reported UCI `id name` value (e.g. "Stockfish 16.1"), or null if
+  // the handshake hasn't produced one yet.
+  getName: () => string | null;
 }
 
 export type StockfishDiag =
@@ -28,6 +31,8 @@ export type StockfishDiag =
 export interface CreateStockfishOptions {
   onBestMove: (uci: string | null) => void;
   onDiag?: (d: StockfishDiag) => void;
+  // fires once (per handle) when the engine reports its `id name` line.
+  onIdName?: (name: string) => void;
   // ms to wait for uci `readyok` before giving up (wasm compile can be slow).
   initTimeoutMs?: number;
   // ms to wait for `bestmove` after each `go`.
@@ -79,6 +84,7 @@ function serializeWorkerData(data: unknown, max = 500): string {
 export function createStockfish(options: CreateStockfishOptions): StockfishHandle {
   const onBestMove = () => options.onBestMove;
   const onDiag = () => options.onDiag;
+  const onIdName = () => options.onIdName;
 
   const initTimeoutMs = options.initTimeoutMs ?? 60_000;
   const searchTimeoutMs = options.searchTimeoutMs ?? 60_000;
@@ -104,6 +110,7 @@ export function createStockfish(options: CreateStockfishOptions): StockfishHandl
   let rawMsgCount = 0;
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
   let activeSearch: { fen: string; depth: number; retries: number } | null = null;
+  let engineName: string | null = null;
   const deferred: Array<() => void> = [];
 
   const markDead = (reason: string) => {
@@ -169,6 +176,19 @@ export function createStockfish(options: CreateStockfishOptions): StockfishHandl
     if (!line) return;
 
     emit(onDiag(), { tag: "engine_line", detail: line });
+
+    // capture the engine's self-reported name (e.g. "Stockfish 16.1").
+    if (engineName == null && /^id\s+name\s+/i.test(line)) {
+      const name = line.replace(/^id\s+name\s+/i, "").trim();
+      if (name) {
+        engineName = name;
+        try {
+          onIdName()?.(name);
+        } catch {
+          // caller callback errors are their problem, not ours.
+        }
+      }
+    }
 
     if (line.includes("uciok") && !sentIsready) {
       sentIsready = true;
@@ -283,6 +303,8 @@ export function createStockfish(options: CreateStockfishOptions): StockfishHandl
     },
 
     isDead: () => dead || disposed,
+
+    getName: () => engineName,
 
     dispose() {
       disposed = true;
